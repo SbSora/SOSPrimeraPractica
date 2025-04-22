@@ -3,28 +3,34 @@ package com.biblioteca.model;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
-// Entity: User
-@Entity
+@Entity(name = "usuarios")
 @Table(name = "usuarios")
 public class Usuario {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
-  private String username;
-  private String registrationNumber;
-  private LocalDate birthDate;
-  private String email;
 
-  // Getters and Setters
-  public Long getId() { return id; }
-  public void setId(Long id) { this.id = id; }
-  public String getUsername() { return username; }
-  public void setUsername(String username) { this.username = username; }
-  public String getRegistrationNumber() { return registrationNumber; }
-  public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }
-  public LocalDate getBirthDate() { return birthDate; }
-  public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
-  public String getEmail() { return email; }
-  public void setEmail(String email) { this.email = email; }
+    @Id
+    private Long id;
+
+    @Column(name = "username", nullable = false)
+    private String username;
+
+    @Column(name = "registration_number", nullable = false)
+    private String registrationNumber;
+
+    @Column(name = "birth_date", nullable = false)
+    private LocalDate birthDate;
+
+    @Column(name = "email", nullable = false)
+    private String email;
+
+    // Getters and setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+    public String getRegistrationNumber() { return registrationNumber; }
+    public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }
+    public LocalDate getBirthDate() { return birthDate; }
+    public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 }
-

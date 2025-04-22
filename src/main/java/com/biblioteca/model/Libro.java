@@ -2,21 +2,32 @@ package com.biblioteca.model;
 
 import jakarta.persistence.*;
 
-
 @Entity(name = "libros")
 @Table(name = "libros")
 public class Libro {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "title", nullable = false)
     private String title;
+
+    @Column(name = "authors", nullable = false)
     private String authors;
+
+    @Column(name = "edition")
     private String edition;
+
+    @Column(name = "isbn", nullable = false)
     private String isbn;
+
+    @Column(name = "publisher")
     private String publisher;
+
+    @Column(name = "available", nullable = false)
     private boolean available;
 
-    // Getters and Setters
+    // Getters and setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getTitle() { return title; }

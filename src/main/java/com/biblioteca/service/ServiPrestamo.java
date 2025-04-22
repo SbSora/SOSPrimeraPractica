@@ -11,12 +11,14 @@ import com.biblioteca.repository.RepoUsuario;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Optional;
+import java.util.List;
 
 @Service
 public class ServiPrestamo {
+
     private final RepoPrestamo repoPrestamo;
     private final RepoUsuario repoUsuario;
     private final RepoLibro repoLibro;
@@ -32,6 +34,7 @@ public class ServiPrestamo {
                 .orElseThrow(() -> new ResourceNotFoundException("Prestamo no encontrado"));
     }
 
+    @Transactional
     public Prestamo borrowBook(Long userId, Long bookId) {
         Usuario usuario = repoUsuario.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
@@ -39,13 +42,13 @@ public class ServiPrestamo {
                 .orElseThrow(() -> new ResourceNotFoundException("Libro no encontrado"));
 
         // Verificar si el usuario tiene penalizaciones activas
-        Optional<Prestamo> penalizacionActiva = repoPrestamo.findByUserIdAndReturnDateIsNull(userId, Pageable.unpaged())
-                .getContent().stream()
+        Page<Prestamo> activeLoans = repoPrestamo.findByUserIdAndReturnDateIsNull(userId, Pageable.unpaged());
+        activeLoans.getContent().stream()
                 .filter(prestamo -> prestamo.getPenaltyUntil() != null && prestamo.getPenaltyUntil().isAfter(LocalDate.now()))
-                .findFirst();
-        if (penalizacionActiva.isPresent()) {
-            throw new BadRequestException("El usuario tiene una penalización activa hasta " + penalizacionActiva.get().getPenaltyUntil());
-        }
+                .findFirst()
+                .ifPresent(prestamo -> {
+                    throw new BadRequestException("El usuario tiene una penalización activa hasta " + prestamo.getPenaltyUntil());
+                });
 
         // Verificar si el libro está disponible
         if (!libro.isAvailable()) {
@@ -54,18 +57,34 @@ public class ServiPrestamo {
 
         // Crear el préstamo
         Prestamo prestamo = new Prestamo();
-        prestamo.setUser(usuario);
-        prestamo.setBook(libro);
+        prestamo.setUsuario(usuario);
+        prestamo.setLibro(libro);
         prestamo.setLoanDate(LocalDate.now());
         prestamo.setDueDate(LocalDate.now().plusWeeks(2));
         prestamo.setReturnDate(null);
         prestamo.setPenaltyUntil(null);
-        libro.setAvailable(false);
 
+        // Assign the lowest available ID
+        prestamo.setId(getNextAvailableId());
+
+        libro.setAvailable(false);
         repoLibro.save(libro);
         return repoPrestamo.save(prestamo);
     }
 
+    private Long getNextAvailableId() {
+        List<Long> existingIds = repoPrestamo.findAllIds();
+        long nextId = 1;
+        for (Long id : existingIds) {
+            if (id > nextId) {
+                break;
+            }
+            nextId = id + 1;
+        }
+        return nextId;
+    }
+
+    @Transactional
     public Prestamo returnBook(Long loanId) {
         Prestamo prestamo = repoPrestamo.findById(loanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prestamo no encontrado"));
@@ -76,7 +95,7 @@ public class ServiPrestamo {
 
         // Marcar el libro como devuelto
         prestamo.setReturnDate(LocalDate.now());
-        Libro libro = prestamo.getBook();
+        Libro libro = prestamo.getLibro();
         libro.setAvailable(true);
 
         // Verificar si la devolución fue tardía
@@ -88,6 +107,7 @@ public class ServiPrestamo {
         return repoPrestamo.save(prestamo);
     }
 
+    @Transactional
     public Prestamo extendLoan(Long loanId) {
         Prestamo prestamo = repoPrestamo.findById(loanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prestamo no encontrado"));

@@ -3,31 +3,40 @@ package com.biblioteca.model;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
-
 @Entity(name = "prestamos")
 @Table(name = "prestamos")
 public class Prestamo {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @ManyToOne
     @JoinColumn(name = "user_id")
-    private Usuario user;
+    private Usuario usuario;
+
     @ManyToOne
     @JoinColumn(name = "book_id")
-    private Libro book;
+    private Libro libro;
+
+    @Column(name = "loan_date", nullable = false)
     private LocalDate loanDate;
+
+    @Column(name = "due_date", nullable = false)
     private LocalDate dueDate;
+
+    @Column(name = "return_date")
     private LocalDate returnDate;
+
+    @Column(name = "penalty_until")
     private LocalDate penaltyUntil;
 
-    // Getters and Setters
+    // Getters and setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public Usuario getUser() { return user; }
-    public void setUser(Usuario user) { this.user = user; }
-    public Libro getBook() { return book; }
-    public void setBook(Libro book) { this.book = book; }
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
+    public Libro getLibro() { return libro; }
+    public void setLibro(Libro libro) { this.libro = libro; }
     public LocalDate getLoanDate() { return loanDate; }
     public void setLoanDate(LocalDate loanDate) { this.loanDate = loanDate; }
     public LocalDate getDueDate() { return dueDate; }
@@ -36,8 +45,4 @@ public class Prestamo {
     public void setReturnDate(LocalDate returnDate) { this.returnDate = returnDate; }
     public LocalDate getPenaltyUntil() { return penaltyUntil; }
     public void setPenaltyUntil(LocalDate penaltyUntil) { this.penaltyUntil = penaltyUntil; }
-    public void setLibro(Libro libro) { this.book = libro; }
-    public Libro getLibro() { return book; }
-    
 }
-
