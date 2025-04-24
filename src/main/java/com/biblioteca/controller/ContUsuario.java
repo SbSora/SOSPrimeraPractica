@@ -1,60 +1,82 @@
 package com.biblioteca.controller;
 
-// Controller: ContUsuario {
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import com.biblioteca.model.PrestamoDTO;
+import com.biblioteca.exception.ResourceNotFoundException;
 import com.biblioteca.model.Usuario;
-import com.biblioteca.model.UsuarioDTO;
 import com.biblioteca.service.ServiUsuario;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.hateoas.EntityModel;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+import java.time.LocalDate;
+import java.util.List;
+
+import com.biblioteca.model.UserActivityDTO;
 
 @RestController
 @RequestMapping("/usuarios")
 public class ContUsuario {
-    private final ServiUsuario ServiUsuario;
 
-    public ContUsuario (ServiUsuario ServiUsuario) {
-        this.ServiUsuario = ServiUsuario;
-    }
+    @Autowired
+    private ServiUsuario serviUsuario;
 
-    @PostMapping
-    public ResponseEntity<EntityModel<Usuario>> addUser(@RequestBody UsuarioDTO userDTO) {
-        Usuario user = ServiUsuario.addUser(userDTO);
-        EntityModel<Usuario> resource = EntityModel.of(user);
-        resource.add(linkTo(methodOn(ContUsuario.class).getUser(user.getId())).withSelfRel());
-        return ResponseEntity.created(linkTo(methodOn(ContUsuario.class).getUser(user.getId())).toUri()).body(resource);
+    // Existing endpoints (from previous test cases)
+    @GetMapping
+    public ResponseEntity<Page<Usuario>> getAllUsuarios(Pageable pageable) {
+        return ResponseEntity.ok(serviUsuario.getAllUsuarios(pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<EntityModel<Usuario>> getUser(@PathVariable Long id) {
-        Usuario user = ServiUsuario.getUser(id);
-        EntityModel<Usuario> resource = EntityModel.of(user);
-        resource.add(linkTo(methodOn(ContUsuario.class).getUser(id)).withSelfRel());
-        return ResponseEntity.ok(resource);
+    public ResponseEntity<Usuario> getUsuarioById(@PathVariable Long id) {
+        return ResponseEntity.ok(serviUsuario.getUsuarioById(id));
+    }
+
+    @PostMapping
+    public ResponseEntity<Usuario> createUsuario(@RequestBody Usuario usuario) {
+        return ResponseEntity.status(201).body(serviUsuario.createUsuario(usuario));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<EntityModel<Usuario>> updateUser(@PathVariable Long id, @RequestBody UsuarioDTO userDTO) {
-        Usuario user = ServiUsuario.updateUser(id, userDTO);
-        EntityModel<Usuario> resource = EntityModel.of(user);
-        resource.add(linkTo(methodOn(ContUsuario.class).getUser(id)).withSelfRel());
-        return ResponseEntity.ok(resource);
+    public ResponseEntity<Usuario> updateUsuario(@PathVariable Long id, @RequestBody Usuario usuario) {
+        usuario.setId(id);
+        return ResponseEntity.ok(serviUsuario.updateUsuario(usuario));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        ServiUsuario.deleteUser(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<String> deleteUsuario(@PathVariable Long id) {
+        try {
+            serviUsuario.deleteUsuario(id);
+            return ResponseEntity.ok("User deleted successfully");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        }
     }
 
-    @GetMapping
-    public ResponseEntity<Page<Usuario>> listUsers(Pageable pageable) {
-        Page<Usuario> users = ServiUsuario.listUsers(pageable);
-        return ResponseEntity.ok(users);
+    // New endpoints
+    @GetMapping("/{id}/prestamos")
+    public ResponseEntity<Page<PrestamoDTO>> getUserLoans(
+            @PathVariable Long id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            Pageable pageable) {
+        Page<PrestamoDTO> prestamos = serviUsuario.getLoansByUserIdFromDate(id, desde, pageable);
+        return ResponseEntity.ok(prestamos);
+    }
+
+    @GetMapping("/{id}/historial")
+    public ResponseEntity<List<PrestamoDTO>> getLoanHistory(@PathVariable Long id) {
+        List<PrestamoDTO> historial = serviUsuario.getLoanHistory(id);
+        return ResponseEntity.ok(historial);
+    }
+
+    @GetMapping("/{id}/actividad")
+    public ResponseEntity<UserActivityDTO> getUserActivity(@PathVariable Long id) {
+        UserActivityDTO actividad = serviUsuario.getUserActivitySummary(id);
+        return ResponseEntity.ok(actividad);
     }
 }

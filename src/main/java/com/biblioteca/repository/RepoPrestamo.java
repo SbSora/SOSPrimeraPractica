@@ -29,4 +29,10 @@ public interface RepoPrestamo extends JpaRepository<Prestamo, Long> {
 
     @Query("SELECT p FROM prestamos p WHERE p.usuario.id = :userId AND p.loanDate BETWEEN :startDate AND :endDate")
     Page<Prestamo> findByUserIdAndLoanDateBetween(@Param("userId") Long userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, Pageable pageable);
+
+    @Query("SELECT p FROM prestamos p WHERE p.usuario.id = :userId AND p.returnDate IS NULL AND p.loanDate >= :desde")
+    Page<Prestamo> findByUserIdAndReturnDateIsNullAndLoanDateGreaterThanEqual(@Param("userId") Long userId, @Param("desde") LocalDate desde, Pageable pageable);
+   
+    @Query("SELECT p FROM prestamos p WHERE p.usuario.id = :userId AND p.returnDate IS NOT NULL ORDER BY p.returnDate DESC")
+    List<Prestamo> findTop5ByUserIdAndReturnDateIsNotNullOrderByReturnDateDesc(@Param("userId") Long userId);
 }

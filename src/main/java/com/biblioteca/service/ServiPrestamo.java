@@ -41,7 +41,6 @@ public class ServiPrestamo {
         Libro libro = repoLibro.findById(bookId)
                 .orElseThrow(() -> new ResourceNotFoundException("Libro no encontrado"));
 
-        // Verificar si el usuario tiene penalizaciones activas
         Page<Prestamo> activeLoans = repoPrestamo.findByUserIdAndReturnDateIsNull(userId, Pageable.unpaged());
         activeLoans.getContent().stream()
                 .filter(prestamo -> prestamo.getPenaltyUntil() != null && prestamo.getPenaltyUntil().isAfter(LocalDate.now()))
@@ -50,12 +49,10 @@ public class ServiPrestamo {
                     throw new BadRequestException("El usuario tiene una penalización activa hasta " + prestamo.getPenaltyUntil());
                 });
 
-        // Verificar si el libro está disponible
         if (!libro.isAvailable()) {
             throw new BadRequestException("El libro no está disponible");
         }
 
-        // Crear el préstamo
         Prestamo prestamo = new Prestamo();
         prestamo.setUsuario(usuario);
         prestamo.setLibro(libro);
@@ -63,8 +60,6 @@ public class ServiPrestamo {
         prestamo.setDueDate(LocalDate.now().plusWeeks(2));
         prestamo.setReturnDate(null);
         prestamo.setPenaltyUntil(null);
-
-        // Assign the lowest available ID
         prestamo.setId(getNextAvailableId());
 
         libro.setAvailable(false);
@@ -93,12 +88,10 @@ public class ServiPrestamo {
             throw new BadRequestException("El libro ya fue devuelto");
         }
 
-        // Marcar el libro como devuelto
         prestamo.setReturnDate(LocalDate.now());
         Libro libro = prestamo.getLibro();
         libro.setAvailable(true);
 
-        // Verificar si la devolución fue tardía
         if (prestamo.getDueDate().isBefore(LocalDate.now())) {
             prestamo.setPenaltyUntil(LocalDate.now().plusWeeks(1));
         }
@@ -120,11 +113,29 @@ public class ServiPrestamo {
             throw new BadRequestException("No se puede extender un préstamo vencido");
         }
 
-        // Extender la fecha de vencimiento por dos semanas
         prestamo.setDueDate(prestamo.getDueDate().plusWeeks(2));
         return repoPrestamo.save(prestamo);
     }
 
+    // Methods for ContUsuario
+    public Page<Prestamo> getLoansByUserIdFromDate(Long userId, LocalDate desde, Pageable pageable) {
+        if (!repoUsuario.existsById(userId)) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
+        }
+        if (desde == null) {
+            desde = LocalDate.of(1970, 1, 1);
+        }
+        return repoPrestamo.findByUserIdAndReturnDateIsNullAndLoanDateGreaterThanEqual(userId, desde, pageable);
+    }
+
+    public List<Prestamo> getLoanHistory(Long userId) {
+        if (!repoUsuario.existsById(userId)) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
+        }
+        return repoPrestamo.findTop5ByUserIdAndReturnDateIsNotNullOrderByReturnDateDesc(userId);
+    }
+
+    // New methods for ContPrestamos
     public Page<Prestamo> listCurrentLoans(Long userId, Pageable pageable) {
         if (!repoUsuario.existsById(userId)) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -142,6 +153,9 @@ public class ServiPrestamo {
     public Page<Prestamo> listLoansByDateRange(Long userId, LocalDate startDate, LocalDate endDate, Pageable pageable) {
         if (!repoUsuario.existsById(userId)) {
             throw new ResourceNotFoundException("Usuario no encontrado");
+        }
+        if (startDate.isAfter(endDate)) {
+            throw new BadRequestException("Start date must be before end date");
         }
         return repoPrestamo.findByUserIdAndLoanDateBetween(userId, startDate, endDate, pageable);
     }

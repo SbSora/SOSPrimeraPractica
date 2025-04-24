@@ -1,83 +1,112 @@
 package com.biblioteca.service;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import com.biblioteca.model.Usuario;
-import com.biblioteca.model.UsuarioDTO;
-import com.biblioteca.repository.RepoUsuario;
-import com.biblioteca.repository.RepoPrestamo;
 import com.biblioteca.exception.ResourceNotFoundException;
+import com.biblioteca.model.Prestamo;
+import com.biblioteca.model.PrestamoDTO;
+import com.biblioteca.model.Usuario;
+import com.biblioteca.repository.RepoPrestamo;
+import com.biblioteca.repository.RepoUsuario;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import com.biblioteca.model.UserActivityDTO;
 
 @Service
 public class ServiUsuario {
-    private final RepoUsuario repoUsuario;
-    private final RepoPrestamo repoPrestamo;
 
-    public ServiUsuario(RepoUsuario repoUsuario, RepoPrestamo repoPrestamo) {
-        this.repoUsuario = repoUsuario;
-        this.repoPrestamo = repoPrestamo;
+    @Autowired
+    private RepoUsuario repoUsuario;
+
+    @Autowired
+    private RepoPrestamo repoPrestamo;
+
+    @Autowired
+    private ServiPrestamo serviPrestamo;
+
+    // Existing methods
+    public Page<Usuario> getAllUsuarios(Pageable pageable) {
+        return repoUsuario.findAll(pageable);
     }
 
-    @Transactional
-    public Usuario addUser(UsuarioDTO usuarioDTO) {
-        Usuario user = new Usuario();
-        user.setUsername(usuarioDTO.getUsername());
-        user.setRegistrationNumber(usuarioDTO.getRegistrationNumber());
-        user.setBirthDate(usuarioDTO.getBirthDate());
-        user.setEmail(usuarioDTO.getEmail());
-
-        // Assign the lowest available ID
-        user.setId(getNextAvailableId());
-
-        return repoUsuario.save(user);
-    }
-
-    private Long getNextAvailableId() {
-        List<Long> existingIds = repoUsuario.findAllIds();
-        long nextId = 1;
-        for (Long id : existingIds) {
-            if (id > nextId) {
-                break;
-            }
-            nextId = id + 1;
-        }
-        return nextId;
-    }
-
-    public Usuario getUser(Long id) {
+    public Usuario getUsuarioById(Long id) {
         return repoUsuario.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
     }
 
-    public Usuario updateUser(Long id, UsuarioDTO usuarioDTO) {
-        Usuario user = getUser(id);
-        user.setUsername(usuarioDTO.getUsername());
-        user.setRegistrationNumber(usuarioDTO.getRegistrationNumber());
-        user.setBirthDate(usuarioDTO.getBirthDate());
-        user.setEmail(usuarioDTO.getEmail());
-        return repoUsuario.save(user);
+    public Usuario createUsuario(Usuario usuario) {
+        return repoUsuario.save(usuario);
+    }
+
+    public Usuario updateUsuario(Usuario usuario) {
+        if (!repoUsuario.existsById(usuario.getId())) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
+        }
+        return repoUsuario.save(usuario);
     }
 
     @Transactional
-    public void deleteUser(Long id) {
-        // Prevent deletion if there are active loans
+    public void deleteUsuario(Long id) {
         boolean hasActiveLoans = repoPrestamo.existsByUserIdAndReturnDateIsNull(id);
         if (hasActiveLoans) {
             throw new IllegalStateException("Cannot delete user with active loans");
         }
-
         if (!repoUsuario.existsById(id)) {
-            throw new ResourceNotFoundException("Usuario not found");
+            throw new ResourceNotFoundException("Usuario no encontrado");
         }
-
         repoUsuario.deleteById(id);
     }
 
-    public Page<Usuario> listUsers(Pageable pageable) {
-        return repoUsuario.findAll(pageable);
+    // New methods
+    public Page<PrestamoDTO> getLoansByUserIdFromDate(Long userId, LocalDate desde, Pageable pageable) {
+        if (!repoUsuario.existsById(userId)) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
+        }
+        return serviPrestamo.getLoansByUserIdFromDate(userId, desde, pageable)
+                .map(this::convertToPrestamoDTO);
+    }
+
+    public List<PrestamoDTO> getLoanHistory(Long userId) {
+        if (!repoUsuario.existsById(userId)) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
+        }
+        return serviPrestamo.getLoanHistory(userId).stream()
+                .map(this::convertToPrestamoDTO)
+                .collect(Collectors.toList());
+    }
+
+    public UserActivityDTO getUserActivitySummary(Long userId) {
+        Usuario usuario = repoUsuario.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+    
+        List<PrestamoDTO> activeLoans = serviPrestamo.getLoansByUserIdFromDate(userId, null, Pageable.unpaged())
+                .getContent() // Convert Page<Prestamo> to List<Prestamo>
+                .stream()
+                .map(this::convertToPrestamoDTO)
+                .collect(Collectors.toList());
+    
+        List<PrestamoDTO> recentLoans = serviPrestamo.getLoanHistory(userId).stream()
+                .map(this::convertToPrestamoDTO)
+                .collect(Collectors.toList());
+    
+        return new UserActivityDTO(usuario, activeLoans, recentLoans);
+    }
+
+    private PrestamoDTO convertToPrestamoDTO(Prestamo prestamo) {
+        PrestamoDTO dto = new PrestamoDTO();
+        dto.setUserId(prestamo.getUsuario() != null ? prestamo.getUsuario().getId() : null);
+        dto.setBookId(prestamo.getLibro() != null ? prestamo.getLibro().getId() : null);
+        dto.setLoanDate(prestamo.getLoanDate());
+        dto.setDueDate(prestamo.getDueDate());
+        dto.setReturnDate(prestamo.getReturnDate());
+        dto.setPenaltyUntil(prestamo.getPenaltyUntil());
+        return dto;
     }
 }
