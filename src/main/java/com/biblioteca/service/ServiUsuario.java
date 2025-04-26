@@ -31,7 +31,6 @@ public class ServiUsuario {
     @Autowired
     private ServiPrestamo serviPrestamo;
 
-    // Existing methods
     public Page<Usuario> getAllUsuarios(Pageable pageable) {
         return repoUsuario.findAll(pageable);
     }
@@ -42,6 +41,25 @@ public class ServiUsuario {
     }
 
     public Usuario createUsuario(Usuario usuario) {
+        // Fetch all existing IDs in ascending order
+        List<Long> existingIds = repoUsuario.findAllIds();
+
+        // Determine the first available ID starting from 1
+        long nextId = 1;
+        if (!existingIds.isEmpty()) {
+            // Find the first gap in the sequence or the next ID after the maximum
+            for (Long id : existingIds) {
+                if (id != nextId) {
+                    break; // Found a gap, use nextId
+                }
+                nextId++;
+            }
+        }
+
+        // Set the calculated ID to the new user
+        usuario.setId(nextId);
+
+        // Save the user to the database
         return repoUsuario.save(usuario);
     }
 
@@ -64,7 +82,6 @@ public class ServiUsuario {
         repoUsuario.deleteById(id);
     }
 
-    // New methods
     public Page<PrestamoDTO> getLoansByUserIdFromDate(Long userId, LocalDate desde, Pageable pageable) {
         if (!repoUsuario.existsById(userId)) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -87,7 +104,7 @@ public class ServiUsuario {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
     
         List<PrestamoDTO> activeLoans = serviPrestamo.getLoansByUserIdFromDate(userId, null, Pageable.unpaged())
-                .getContent() // Convert Page<Prestamo> to List<Prestamo>
+                .getContent()
                 .stream()
                 .map(this::convertToPrestamoDTO)
                 .collect(Collectors.toList());

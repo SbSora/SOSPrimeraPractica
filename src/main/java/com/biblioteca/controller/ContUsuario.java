@@ -3,6 +3,8 @@ package com.biblioteca.controller;
 import com.biblioteca.model.PrestamoDTO;
 import com.biblioteca.exception.ResourceNotFoundException;
 import com.biblioteca.model.Usuario;
+import com.biblioteca.model.UsuarioDTO;
+import com.biblioteca.repository.RepoUsuario;
 import com.biblioteca.service.ServiUsuario;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,12 +26,23 @@ public class ContUsuario {
     @Autowired
     private ServiUsuario serviUsuario;
 
+    @Autowired
+    private RepoUsuario repoUsuario; // Add this line
+
     // Existing endpoints (from previous test cases)
     @GetMapping
-    public ResponseEntity<Page<Usuario>> getAllUsuarios(Pageable pageable) {
-        return ResponseEntity.ok(serviUsuario.getAllUsuarios(pageable));
-    }
+    public Page<UsuarioDTO> getAllUsuarios(Pageable pageable) {
+    return repoUsuario.findAll(pageable).map(this::convertToUsuarioDTO);
+}
 
+private UsuarioDTO convertToUsuarioDTO(Usuario usuario) {
+    UsuarioDTO dto = new UsuarioDTO();
+    dto.setUsername(usuario.getUsername());
+    dto.setRegistrationNumber(usuario.getRegistrationNumber());
+    dto.setBirthDate(usuario.getBirthDate());
+    dto.setEmail(usuario.getEmail());
+    return dto;
+}
     @GetMapping("/{id}")
     public ResponseEntity<Usuario> getUsuarioById(@PathVariable Long id) {
         return ResponseEntity.ok(serviUsuario.getUsuarioById(id));
