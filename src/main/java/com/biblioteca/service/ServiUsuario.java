@@ -4,12 +4,17 @@ import com.biblioteca.exception.ResourceNotFoundException;
 import com.biblioteca.model.Prestamo;
 import com.biblioteca.model.PrestamoDTO;
 import com.biblioteca.model.Usuario;
+import com.biblioteca.model.UsuarioDTO;
 import com.biblioteca.repository.RepoPrestamo;
 import com.biblioteca.repository.RepoUsuario;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.PagedModel;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +23,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.biblioteca.model.UserActivityDTO;
+import com.biblioteca.controller.ContUsuario;
+import com.biblioteca.controller.ContPrestamo;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @Service
 public class ServiUsuario {
@@ -31,43 +40,63 @@ public class ServiUsuario {
     @Autowired
     private ServiPrestamo serviPrestamo;
 
-    public Page<Usuario> getAllUsuarios(Pageable pageable) {
-        return repoUsuario.findAll(pageable);
+    @Autowired
+    private PagedResourcesAssembler<UsuarioDTO> usuarioPagedAssembler;
+
+    @Autowired
+    private PagedResourcesAssembler<PrestamoDTO> prestamoPagedAssembler;
+
+    public PagedModel<EntityModel<UsuarioDTO>> getAllUsuarios(Pageable pageable) {
+        Page<UsuarioDTO> usuarioPage = repoUsuario.findAll(pageable).map(this::convertToUsuarioDTO);
+        return usuarioPagedAssembler.toModel(usuarioPage, usuarioDTO -> {
+            EntityModel<UsuarioDTO> model = EntityModel.of(usuarioDTO);
+            model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(usuarioDTO.getId())).withSelfRel());
+            return model;
+        });
     }
 
-    public Usuario getUsuarioById(Long id) {
-        return repoUsuario.findById(id)
+    public EntityModel<Usuario> getUsuarioById(Long id) {
+        Usuario usuario = repoUsuario.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        EntityModel<Usuario> model = EntityModel.of(usuario);
+        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(id)).withSelfRel());
+        model.add(linkTo(methodOn(ContUsuario.class).getUserLoans(id, null, Pageable.unpaged())).withRel("loans"));
+        model.add(linkTo(methodOn(ContUsuario.class).getLoanHistory(id)).withRel("history"));
+        model.add(linkTo(methodOn(ContUsuario.class).getUserActivity(id)).withRel("activity"));
+        model.add(linkTo(methodOn(ContUsuario.class).deleteUsuario(id)).withRel("delete"));
+        return model;
     }
 
-    public Usuario createUsuario(Usuario usuario) {
-        // Fetch all existing IDs in ascending order
+    @Transactional
+    public EntityModel<UsuarioDTO> createUsuario(Usuario usuario) {
         List<Long> existingIds = repoUsuario.findAllIds();
-
-        // Determine the first available ID starting from 1
         long nextId = 1;
         if (!existingIds.isEmpty()) {
-            // Find the first gap in the sequence or the next ID after the maximum
             for (Long id : existingIds) {
                 if (id != nextId) {
-                    break; // Found a gap, use nextId
+                    break;
                 }
                 nextId++;
             }
         }
-
-        // Set the calculated ID to the new user
         usuario.setId(nextId);
-
-        // Save the user to the database
-        return repoUsuario.save(usuario);
+        Usuario savedUsuario = repoUsuario.save(usuario);
+        UsuarioDTO usuarioDTO = convertToUsuarioDTO(savedUsuario);
+        EntityModel<UsuarioDTO> model = EntityModel.of(usuarioDTO);
+        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(usuarioDTO.getId())).withSelfRel());
+        model.add(linkTo(methodOn(ContUsuario.class).getAllUsuarios(Pageable.unpaged())).withRel("users"));
+        return model;
     }
 
-    public Usuario updateUsuario(Usuario usuario) {
+    public EntityModel<Usuario> updateUsuario(Usuario usuario) {
         if (!repoUsuario.existsById(usuario.getId())) {
             throw new ResourceNotFoundException("Usuario no encontrado");
         }
-        return repoUsuario.save(usuario);
+        Usuario updatedUsuario = repoUsuario.save(usuario);
+        EntityModel<Usuario> model = EntityModel.of(updatedUsuario);
+        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(usuario.getId())).withSelfRel());
+        model.add(linkTo(methodOn(ContUsuario.class).deleteUsuario(usuario.getId())).withRel("delete"));
+        return model;
     }
 
     @Transactional
@@ -82,48 +111,88 @@ public class ServiUsuario {
         repoUsuario.deleteById(id);
     }
 
-    public Page<PrestamoDTO> getLoansByUserIdFromDate(Long userId, LocalDate desde, Pageable pageable) {
+    public PagedModel<EntityModel<PrestamoDTO>> getLoansByUserIdFromDate(Long userId, LocalDate desde, Pageable pageable) {
         if (!repoUsuario.existsById(userId)) {
             throw new ResourceNotFoundException("Usuario no encontrado");
         }
-        return serviPrestamo.getLoansByUserIdFromDate(userId, desde, pageable)
+        Page<PrestamoDTO> prestamoPage = serviPrestamo.getLoansByUserIdFromDate(userId, desde, pageable)
                 .map(this::convertToPrestamoDTO);
+        return prestamoPagedAssembler.toModel(prestamoPage, prestamoDTO -> {
+            EntityModel<PrestamoDTO> model = EntityModel.of(prestamoDTO);
+            if (prestamoDTO.getReturnDate() == null) { // Only add return/extend links for active loans
+                model.add(linkTo(methodOn(ContPrestamo.class).returnBook(prestamoDTO.getId())).withRel("return"));
+                model.add(linkTo(methodOn(ContPrestamo.class).extendLoan(prestamoDTO.getId())).withRel("extend"));
+            }
+            return model;
+        });
     }
 
-    public List<PrestamoDTO> getLoanHistory(Long userId) {
+    public CollectionModel<EntityModel<PrestamoDTO>> getLoanHistory(Long userId) {
         if (!repoUsuario.existsById(userId)) {
             throw new ResourceNotFoundException("Usuario no encontrado");
         }
-        return serviPrestamo.getLoanHistory(userId).stream()
+        List<EntityModel<PrestamoDTO>> prestamoModels = serviPrestamo.getLoanHistory(userId).stream()
                 .map(this::convertToPrestamoDTO)
+                .map(prestamoDTO -> EntityModel.of(prestamoDTO))
                 .collect(Collectors.toList());
+        CollectionModel<EntityModel<PrestamoDTO>> model = CollectionModel.of(prestamoModels);
+        model.add(linkTo(methodOn(ContUsuario.class).getLoanHistory(userId)).withSelfRel());
+        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(userId)).withRel("user"));
+        return model;
     }
 
-    public UserActivityDTO getUserActivitySummary(Long userId) {
+    public EntityModel<UserActivityDTO> getUserActivitySummary(Long userId) {
         Usuario usuario = repoUsuario.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
     
-        List<PrestamoDTO> activeLoans = serviPrestamo.getLoansByUserIdFromDate(userId, null, Pageable.unpaged())
+        List<EntityModel<PrestamoDTO>> activeLoans = serviPrestamo.getLoansByUserIdFromDate(userId, null, Pageable.unpaged())
                 .getContent()
                 .stream()
                 .map(this::convertToPrestamoDTO)
+                .map(prestamoDTO -> {
+                    EntityModel<PrestamoDTO> model = EntityModel.of(prestamoDTO);
+                    if (prestamoDTO.getReturnDate() == null) { // Only add return/extend links for active loans
+                        model.add(linkTo(methodOn(ContPrestamo.class).returnBook(prestamoDTO.getId())).withRel("return"));
+                        model.add(linkTo(methodOn(ContPrestamo.class).extendLoan(prestamoDTO.getId())).withRel("extend"));
+                    }
+                    return model;
+                })
                 .collect(Collectors.toList());
     
-        List<PrestamoDTO> recentLoans = serviPrestamo.getLoanHistory(userId).stream()
+        List<EntityModel<PrestamoDTO>> recentLoans = serviPrestamo.getLoanHistory(userId).stream()
                 .map(this::convertToPrestamoDTO)
+                .map(prestamoDTO -> EntityModel.of(prestamoDTO))
                 .collect(Collectors.toList());
     
-        return new UserActivityDTO(usuario, activeLoans, recentLoans);
+        UserActivityDTO activityDTO = new UserActivityDTO(usuario, 
+                activeLoans.stream().map(EntityModel::getContent).collect(Collectors.toList()), 
+                recentLoans.stream().map(EntityModel::getContent).collect(Collectors.toList()));
+        EntityModel<UserActivityDTO> model = EntityModel.of(activityDTO);
+        model.add(linkTo(methodOn(ContUsuario.class).getUserActivity(userId)).withSelfRel());
+        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(userId)).withRel("user"));
+        model.add(linkTo(methodOn(ContUsuario.class).getUserLoans(userId, null, Pageable.unpaged())).withRel("loans"));
+        return model;
     }
 
     private PrestamoDTO convertToPrestamoDTO(Prestamo prestamo) {
         PrestamoDTO dto = new PrestamoDTO();
+        dto.setId(prestamo.getId());
         dto.setUserId(prestamo.getUsuario() != null ? prestamo.getUsuario().getId() : null);
         dto.setBookId(prestamo.getLibro() != null ? prestamo.getLibro().getId() : null);
         dto.setLoanDate(prestamo.getLoanDate());
         dto.setDueDate(prestamo.getDueDate());
         dto.setReturnDate(prestamo.getReturnDate());
         dto.setPenaltyUntil(prestamo.getPenaltyUntil());
+        return dto;
+    }
+
+    private UsuarioDTO convertToUsuarioDTO(Usuario usuario) {
+        UsuarioDTO dto = new UsuarioDTO();
+        dto.setId(usuario.getId());
+        dto.setUsername(usuario.getUsername());
+        dto.setRegistrationNumber(usuario.getRegistrationNumber());
+        dto.setBirthDate(usuario.getBirthDate());
+        dto.setEmail(usuario.getEmail());
         return dto;
     }
 }

@@ -3,6 +3,7 @@ package com.biblioteca.model;
 import java.time.LocalDate;
 
 public class PrestamoDTO {
+    private Long id;
     private Long bookId;
     private Long userId;
     private LocalDate loanDate;
@@ -11,6 +12,14 @@ public class PrestamoDTO {
     private LocalDate penaltyUntil;
 
     // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public Long getBookId() {
         return bookId;
     }
