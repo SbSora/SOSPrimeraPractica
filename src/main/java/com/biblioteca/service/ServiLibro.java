@@ -4,6 +4,9 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.PagedModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,19 +15,24 @@ import com.biblioteca.model.Libro;
 import com.biblioteca.model.LibroDTO;
 import com.biblioteca.repository.RepoLibro;
 import com.biblioteca.repository.RepoPrestamo;
+import com.biblioteca.controller.ContLibro;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @Service
 public class ServiLibro {
     private final RepoLibro repoLibro;
     private final RepoPrestamo repoPrestamo;
+    private final PagedResourcesAssembler<LibroDTO> bookPagedAssembler;
 
-    public ServiLibro(RepoLibro repoLibro, RepoPrestamo repoPrestamo) {
+    public ServiLibro(RepoLibro repoLibro, RepoPrestamo repoPrestamo, PagedResourcesAssembler<LibroDTO> bookPagedAssembler) {
         this.repoLibro = repoLibro;
         this.repoPrestamo = repoPrestamo;
+        this.bookPagedAssembler = bookPagedAssembler;
     }
 
     @Transactional
-    public Libro addBook(LibroDTO libroDTO) {
+    public EntityModel<LibroDTO> addBook(LibroDTO libroDTO) {
         Libro libro = new Libro();
         libro.setTitle(libroDTO.getTitle());
         libro.setAuthors(libroDTO.getAuthors());
@@ -36,7 +44,12 @@ public class ServiLibro {
         // Assign the lowest available ID
         libro.setId(getNextAvailableId());
 
-        return repoLibro.save(libro);
+        Libro savedLibro = repoLibro.save(libro);
+        LibroDTO savedDTO = convertToLibroDTO(savedLibro);
+        EntityModel<LibroDTO> resource = EntityModel.of(savedDTO);
+        resource.add(linkTo(methodOn(ContLibro.class).getBook(savedDTO.getId())).withSelfRel());
+        resource.add(linkTo(methodOn(ContLibro.class).listBooks(null, null, Pageable.unpaged())).withRel("books"));
+        return resource;
     }
 
     private Long getNextAvailableId() {
@@ -51,19 +64,30 @@ public class ServiLibro {
         return nextId;
     }
 
-    public Libro getBook(Long id) {
-        return repoLibro.findById(id)
+    public EntityModel<LibroDTO> getBook(Long id) {
+        Libro libro = repoLibro.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Libro no encontrado"));
+        LibroDTO dto = convertToLibroDTO(libro);
+        EntityModel<LibroDTO> resource = EntityModel.of(dto);
+        resource.add(linkTo(methodOn(ContLibro.class).getBook(id)).withSelfRel());
+        resource.add(linkTo(methodOn(ContLibro.class).deleteBook(id)).withRel("delete"));
+        return resource;
     }
 
-    public Libro updateBook(Long id, LibroDTO libroDTO) {
-        Libro libro = getBook(id);
+    public EntityModel<LibroDTO> updateBook(Long id, LibroDTO libroDTO) {
+        Libro libro = repoLibro.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Libro no encontrado"));
         libro.setTitle(libroDTO.getTitle());
         libro.setAuthors(libroDTO.getAuthors());
         libro.setEdition(libroDTO.getEdition());
         libro.setIsbn(libroDTO.getIsbn());
         libro.setPublisher(libroDTO.getPublisher());
-        return repoLibro.save(libro);
+        Libro updatedLibro = repoLibro.save(libro);
+        LibroDTO updatedDTO = convertToLibroDTO(updatedLibro);
+        EntityModel<LibroDTO> resource = EntityModel.of(updatedDTO);
+        resource.add(linkTo(methodOn(ContLibro.class).getBook(id)).withSelfRel());
+        resource.add(linkTo(methodOn(ContLibro.class).deleteBook(id)).withRel("delete"));
+        return resource;
     }
 
     @Transactional
@@ -81,15 +105,42 @@ public class ServiLibro {
         repoLibro.deleteById(id);
     }
 
-    public Page<Libro> listBooks(Pageable pageable) {
-        return repoLibro.findAll(pageable);
+    public PagedModel<EntityModel<LibroDTO>> listBooks(Pageable pageable) {
+        Page<LibroDTO> books = repoLibro.findAll(pageable).map(this::convertToLibroDTO);
+        return bookPagedAssembler.toModel(books, book -> {
+            EntityModel<LibroDTO> resource = EntityModel.of(book);
+            resource.add(linkTo(methodOn(ContLibro.class).getBook(book.getId())).withSelfRel());
+            return resource;
+        });
     }
 
-    public Page<Libro> listBooksByTitle(String title, Pageable pageable) {
-        return repoLibro.findByTitleContaining(title, pageable);
+    public PagedModel<EntityModel<LibroDTO>> listBooksByTitle(String title, Pageable pageable) {
+        Page<LibroDTO> books = repoLibro.findByTitleContaining(title, pageable).map(this::convertToLibroDTO);
+        return bookPagedAssembler.toModel(books, book -> {
+            EntityModel<LibroDTO> resource = EntityModel.of(book);
+            resource.add(linkTo(methodOn(ContLibro.class).getBook(book.getId())).withSelfRel());
+            return resource;
+        });
     }
 
-    public Page<Libro> listAvailableBooks(Pageable pageable) {
-        return repoLibro.findByAvailableTrue(pageable);
+    public PagedModel<EntityModel<LibroDTO>> listAvailableBooks(Pageable pageable) {
+        Page<LibroDTO> books = repoLibro.findByAvailableTrue(pageable).map(this::convertToLibroDTO);
+        return bookPagedAssembler.toModel(books, book -> {
+            EntityModel<LibroDTO> resource = EntityModel.of(book);
+            resource.add(linkTo(methodOn(ContLibro.class).getBook(book.getId())).withSelfRel());
+            return resource;
+        });
+    }
+
+    private LibroDTO convertToLibroDTO(Libro libro) {
+        LibroDTO dto = new LibroDTO();
+        dto.setId(libro.getId());
+        dto.setTitle(libro.getTitle());
+        dto.setAuthors(libro.getAuthors());
+        dto.setEdition(libro.getEdition());
+        dto.setIsbn(libro.getIsbn());
+        dto.setPublisher(libro.getPublisher());
+        dto.setAvailable(libro.isAvailable());
+        return dto;
     }
 }
