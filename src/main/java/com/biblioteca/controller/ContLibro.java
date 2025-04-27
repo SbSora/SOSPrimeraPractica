@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import com.biblioteca.model.LibroDTO;
 import com.biblioteca.service.ServiLibro;
 
+import jakarta.validation.Valid;
+
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @RestController
@@ -21,7 +23,7 @@ public class ContLibro {
     }
 
     @PostMapping
-    public ResponseEntity<EntityModel<LibroDTO>> addBook(@RequestBody LibroDTO bookDTO) {
+    public ResponseEntity<EntityModel<LibroDTO>> addBook(@Valid @RequestBody LibroDTO bookDTO) {
         EntityModel<LibroDTO> resource = serviLibro.addBook(bookDTO);
         return ResponseEntity.created(linkTo(methodOn(ContLibro.class).getBook(resource.getContent().getId())).toUri()).body(resource);
     }
@@ -33,7 +35,7 @@ public class ContLibro {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<EntityModel<LibroDTO>> updateBook(@PathVariable Long id, @RequestBody LibroDTO bookDTO) {
+    public ResponseEntity<EntityModel<LibroDTO>> updateBook(@PathVariable Long id, @Valid @RequestBody LibroDTO bookDTO) {
         EntityModel<LibroDTO> resource = serviLibro.updateBook(id, bookDTO);
         return ResponseEntity.ok(resource);
     }

@@ -15,13 +15,13 @@ public class Libro {
     @Column(name = "authors", nullable = false)
     private String authors;
 
-    @Column(name = "edition")
+    @Column(name = "edition", nullable = false)
     private String edition;
 
     @Column(name = "isbn", nullable = false)
     private String isbn;
 
-    @Column(name = "publisher")
+    @Column(name = "publisher", nullable = false)
     private String publisher;
 
     @Column(name = "available", nullable = false)
