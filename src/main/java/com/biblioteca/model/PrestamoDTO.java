@@ -2,10 +2,17 @@ package com.biblioteca.model;
 
 import java.time.LocalDate;
 
+import jakarta.validation.constraints.NotNull;
+
 public class PrestamoDTO {
     private Long id;
-    private Long bookId;
+
+    @NotNull(message = "El ID del usuario no puede ser nulo")
     private Long userId;
+
+    @NotNull(message = "El ID del libro no puede ser nulo")
+    private Long bookId;
+
     private LocalDate loanDate;
     private LocalDate dueDate;
     private LocalDate returnDate;

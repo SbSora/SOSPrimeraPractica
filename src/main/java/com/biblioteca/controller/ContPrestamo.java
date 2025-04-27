@@ -12,6 +12,8 @@ import com.biblioteca.exception.BadRequestException;
 
 import java.time.LocalDate;
 
+import jakarta.validation.Valid;
+
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @RestController
@@ -24,7 +26,7 @@ public class ContPrestamo {
     }
 
     @PostMapping
-    public ResponseEntity<EntityModel<PrestamoDTO>> borrowBook(@RequestBody PrestamoDTO prestamoDTO) {
+    public ResponseEntity<EntityModel<PrestamoDTO>> borrowBook(@Valid @RequestBody PrestamoDTO prestamoDTO) {
         if (prestamoDTO.getUserId() == null || prestamoDTO.getBookId() == null) {
             throw new BadRequestException("User ID and Book ID are required");
         }
