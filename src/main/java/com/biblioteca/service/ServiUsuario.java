@@ -55,10 +55,11 @@ public class ServiUsuario {
         });
     }
 
-    public EntityModel<Usuario> getUsuarioById(Long id) {
+    public EntityModel<UsuarioDTO> getUsuarioById(Long id) {
         Usuario usuario = repoUsuario.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
-        EntityModel<Usuario> model = EntityModel.of(usuario);
+        UsuarioDTO usuarioDTO = convertToUsuarioDTO(usuario);
+        EntityModel<UsuarioDTO> model = EntityModel.of(usuarioDTO);
         model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(id)).withSelfRel());
         model.add(linkTo(methodOn(ContUsuario.class).getUserLoans(id, null, Pageable.unpaged())).withRel("loans"));
         model.add(linkTo(methodOn(ContUsuario.class).getLoanHistory(id)).withRel("history"));
@@ -68,7 +69,7 @@ public class ServiUsuario {
     }
 
     @Transactional
-    public EntityModel<UsuarioDTO> createUsuario(Usuario usuario) {
+    public EntityModel<UsuarioDTO> createUsuario(UsuarioDTO usuarioDTO) {
         List<Long> existingIds = repoUsuario.findAllIds();
         long nextId = 1;
         if (!existingIds.isEmpty()) {
@@ -79,23 +80,35 @@ public class ServiUsuario {
                 nextId++;
             }
         }
+        Usuario usuario = new Usuario();
         usuario.setId(nextId);
+        usuario.setUsername(usuarioDTO.getUsername());
+        usuario.setRegistrationNumber(usuarioDTO.getRegistrationNumber());
+        usuario.setBirthDate(usuarioDTO.getBirthDate());
+        usuario.setEmail(usuarioDTO.getEmail());
         Usuario savedUsuario = repoUsuario.save(usuario);
-        UsuarioDTO usuarioDTO = convertToUsuarioDTO(savedUsuario);
-        EntityModel<UsuarioDTO> model = EntityModel.of(usuarioDTO);
-        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(usuarioDTO.getId())).withSelfRel());
+        UsuarioDTO savedUsuarioDTO = convertToUsuarioDTO(savedUsuario);
+        EntityModel<UsuarioDTO> model = EntityModel.of(savedUsuarioDTO);
+        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(savedUsuarioDTO.getId())).withSelfRel());
         model.add(linkTo(methodOn(ContUsuario.class).getAllUsuarios(Pageable.unpaged())).withRel("users"));
         return model;
     }
 
-    public EntityModel<Usuario> updateUsuario(Usuario usuario) {
-        if (!repoUsuario.existsById(usuario.getId())) {
+    public EntityModel<UsuarioDTO> updateUsuario(UsuarioDTO usuarioDTO) {
+        if (!repoUsuario.existsById(usuarioDTO.getId())) {
             throw new ResourceNotFoundException("Usuario no encontrado");
         }
+        Usuario usuario = new Usuario();
+        usuario.setId(usuarioDTO.getId());
+        usuario.setUsername(usuarioDTO.getUsername());
+        usuario.setRegistrationNumber(usuarioDTO.getRegistrationNumber());
+        usuario.setBirthDate(usuarioDTO.getBirthDate());
+        usuario.setEmail(usuarioDTO.getEmail());
         Usuario updatedUsuario = repoUsuario.save(usuario);
-        EntityModel<Usuario> model = EntityModel.of(updatedUsuario);
-        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(usuario.getId())).withSelfRel());
-        model.add(linkTo(methodOn(ContUsuario.class).deleteUsuario(usuario.getId())).withRel("delete"));
+        UsuarioDTO updatedUsuarioDTO = convertToUsuarioDTO(updatedUsuario);
+        EntityModel<UsuarioDTO> model = EntityModel.of(updatedUsuarioDTO);
+        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(updatedUsuarioDTO.getId())).withSelfRel());
+        model.add(linkTo(methodOn(ContUsuario.class).deleteUsuario(updatedUsuarioDTO.getId())).withRel("delete"));
         return model;
     }
 

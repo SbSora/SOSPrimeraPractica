@@ -2,7 +2,6 @@ package com.biblioteca.controller;
 
 import com.biblioteca.model.PrestamoDTO;
 import com.biblioteca.exception.ResourceNotFoundException;
-import com.biblioteca.model.Usuario;
 import com.biblioteca.model.UsuarioDTO;
 import com.biblioteca.service.ServiUsuario;
 
@@ -19,6 +18,10 @@ import java.time.LocalDate;
 
 import com.biblioteca.model.UserActivityDTO;
 
+import jakarta.validation.Valid;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+
 @RestController
 @RequestMapping("/usuarios")
 public class ContUsuario {
@@ -32,19 +35,20 @@ public class ContUsuario {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<EntityModel<Usuario>> getUsuarioById(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<UsuarioDTO>> getUsuarioById(@PathVariable Long id) {
         return ResponseEntity.ok(serviUsuario.getUsuarioById(id));
     }
 
     @PostMapping
-    public ResponseEntity<EntityModel<UsuarioDTO>> createUsuario(@RequestBody Usuario usuario) {
-        return ResponseEntity.status(201).body(serviUsuario.createUsuario(usuario));
+    public ResponseEntity<EntityModel<UsuarioDTO>> createUsuario(@Valid @RequestBody UsuarioDTO usuarioDTO) {
+        EntityModel<UsuarioDTO> resource = serviUsuario.createUsuario(usuarioDTO);
+        return ResponseEntity.created(linkTo(methodOn(ContUsuario.class).getUsuarioById(resource.getContent().getId())).toUri()).body(resource);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<EntityModel<Usuario>> updateUsuario(@PathVariable Long id, @RequestBody Usuario usuario) {
-        usuario.setId(id);
-        return ResponseEntity.ok(serviUsuario.updateUsuario(usuario));
+    public ResponseEntity<EntityModel<UsuarioDTO>> updateUsuario(@PathVariable Long id, @Valid @RequestBody UsuarioDTO usuarioDTO) {
+        usuarioDTO.setId(id);
+        return ResponseEntity.ok(serviUsuario.updateUsuario(usuarioDTO));
     }
 
     @DeleteMapping("/{id}")
