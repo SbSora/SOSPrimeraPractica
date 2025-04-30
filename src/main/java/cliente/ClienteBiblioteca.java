@@ -1,12 +1,14 @@
 package cliente;
 
-import java.util.Scanner;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
+
 
 public class ClienteBiblioteca {
 
@@ -52,7 +54,7 @@ public class ClienteBiblioteca {
                 case 5 -> consultarUsuario();
                 case 6 -> consultarPrestamosActivos();
                 case 7 -> consultarHistorialPrestamos();
-                case 8 -> consultarUltimos5Prestamos();
+                case 8 -> consultarActividadUsuario();
                 case 9 -> crearLibro();
                 case 10 -> eliminarLibro();
                 case 11 -> modificarLibro();
@@ -303,7 +305,7 @@ public class ClienteBiblioteca {
         boolean tieneQuery = false;
     
         if (!patronTitulo.isEmpty()) {
-            url += "?titulo=" + patronTitulo;
+            url += "?titulo=" + URLEncoder.encode(patronTitulo, StandardCharsets.UTF_8);
             tieneQuery = true;
         }
     
@@ -493,12 +495,181 @@ public class ClienteBiblioteca {
 
 
     private static void consultarPrestamosActivos() throws Exception {
-
+        Scanner sc = new Scanner(System.in);
+    
+        System.out.println("\n--> Consultar Préstamos Activos de un Usuario");
+    
+        System.out.print("Introduce ID del usuario: ");
+        int userId = Integer.parseInt(sc.nextLine());
+    
+        System.out.print("¿Deseas filtrar por fecha desde? (formato yyyy-MM-dd, pulsa ENTER para omitir): ");
+        String fecha = sc.nextLine().trim();
+    
+        String url = BASE_URL + "/usuarios/" + userId + "/prestamos";
+    
+        if (!fecha.isEmpty()) {
+            url += "?desde=" + URLEncoder.encode(fecha, StandardCharsets.UTF_8);
+        }
+    
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .build();
+    
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    
+        System.out.println("Código HTTP: " + response.statusCode());
+    
+        if (response.statusCode() == 200) {
+            String body = response.body();
+    
+            String[] partes = body.split("\\{\\\"id\\\":");
+    
+            for (int i = 1; i < partes.length; i++) {
+                String prestamo = partes[i];
+                String[] datos = prestamo.split(",");
+    
+                String id = datos[0];
+                String loanDate = extraerValor(datos, "\"loanDate\":\"");
+                String dueDate = extraerValor(datos, "\"dueDate\":\"");
+                String returnDate = extraerValor(datos, "\"returnDate\":");
+    
+                System.out.println("Préstamo ID: " + id.trim() +
+                        " | Fecha préstamo: " + loanDate +
+                        " | Fecha vencimiento: " + dueDate +
+                        " | Devuelto: " + (returnDate.contains("null") ? "No" : returnDate));
+            }
+        } else {
+            System.out.println("Error al consultar préstamos: " + response.body());
+        }
     }
+    
     private static void consultarHistorialPrestamos() throws Exception {
-
+        Scanner sc = new Scanner(System.in);
+    
+        System.out.println("\n--> Consultar Historial de Préstamos de un Usuario");
+    
+        System.out.print("Introduce ID del usuario: ");
+        int userId = Integer.parseInt(sc.nextLine());
+    
+        String url = BASE_URL + "/usuarios/" + userId + "/historial";
+    
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .build();
+    
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    
+        System.out.println("Código HTTP: " + response.statusCode());
+    
+        if (response.statusCode() == 200) {
+            String body = response.body();
+    
+            String[] partes = body.split("\\{\\\"id\\\":");
+    
+            for (int i = 1; i < partes.length; i++) {
+                String prestamo = partes[i];
+                String[] datos = prestamo.split(",");
+    
+                String id = datos[0];
+                String loanDate = extraerValor(datos, "\"loanDate\":\"");
+                String dueDate = extraerValor(datos, "\"dueDate\":\"");
+                String returnDate = extraerValor(datos, "\"returnDate\":\"");
+    
+                System.out.println("Préstamo ID: " + id.trim() +
+                        " | Fecha préstamo: " + loanDate +
+                        " | Fecha vencimiento: " + dueDate +
+                        " | Fecha devolución: " + returnDate);
+            }
+        } else {
+            System.out.println("Error al consultar historial: " + response.body());
+        }
     }
-    private static void consultarUltimos5Prestamos() throws Exception {
+    
+    
+    private static void consultarActividadUsuario() throws Exception {
+        Scanner sc = new Scanner(System.in);
+    
+        System.out.println("\n--> Consultar Actividad Completa del Usuario");
+    
+        System.out.print("Introduce ID del usuario: ");
+        int userId = Integer.parseInt(sc.nextLine());
+    
+        String url = BASE_URL + "/usuarios/" + userId + "/actividad";
+    
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .build();
+    
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    
+        System.out.println("Código HTTP: " + response.statusCode());
+    
+        if (response.statusCode() == 200) {
+            String body = response.body();
+    
+            System.out.println("\n=== Datos del Usuario ===");
+            String username = extraerCampo(body, "\"username\":\"");
+            String registrationNumber = extraerCampo(body, "\"registrationNumber\":\"");
+            String birthDate = extraerCampo(body, "\"birthDate\":\"");
+            String email = extraerCampo(body, "\"email\":\"");
+    
+            System.out.println("Nombre: " + username +
+                    " | Matrícula: " + registrationNumber +
+                    " | Nacimiento: " + birthDate +
+                    " | Email: " + email);
+    
+            System.out.println("\n=== Préstamos Activos ===");
+            mostrarBloque(body, "\"prestamosActivos\":\\[", "]");
+    
+            System.out.println("\n=== Últimos 5 Préstamos Devueltos ===");
+            mostrarBloque(body, "\"historialReciente\":\\[", "]");
+        } else {
+            System.out.println("Error al consultar actividad: " + response.body());
+        }
+    }
+     
 
-    }   
+    private static String extraerValor(String[] datos, String clave) {
+        for (String dato : datos) {
+            if (dato.contains(clave)) {
+                return dato.split(":")[1].replaceAll("\"", "").trim();
+            }
+        }
+        return "No disponible";
+    }
+
+    private static String extraerCampo(String json, String clave) {
+        try {
+            return json.split(clave)[1].split("\"")[0];
+        } catch (Exception e) {
+            return "No disponible";
+        }
+    }
+
+    private static void mostrarBloque(String body, String inicioClave, String finClave) {
+        try {
+            String bloque = body.split(inicioClave)[1].split(finClave)[0];
+            String[] prestamos = bloque.split("\\{\\\"id\\\":");
+    
+            for (int i = 1; i < prestamos.length; i++) {
+                String[] datos = prestamos[i].split(",");
+                String id = datos[0];
+                String loanDate = extraerValor(datos, "\"loanDate\":\"");
+                String dueDate = extraerValor(datos, "\"dueDate\":\"");
+                String returnDate = extraerValor(datos, "\"returnDate\":");
+    
+                System.out.println("Préstamo ID: " + id.trim() +
+                        " | Préstamo: " + loanDate +
+                        " | Vence: " + dueDate +
+                        " | Devuelto: " + (returnDate.contains("null") ? "No" : returnDate));
+            }
+        } catch (Exception e) {
+            System.out.println("No hay datos.");
+        }
+    }
+    
+    
 }
