@@ -22,7 +22,7 @@ public class ClienteBiblioteca {
         while (!salir) {
             System.out.println("\n========== CLIENTE BIBLIOTECA ==========");
             System.out.println("\n");
-            System.out.println("------De momento funcionan todas las secciones excepto la 6, 7, y 8 ");
+
             System.out.println("1.  Crear Usuario");
             System.out.println("2.  Eliminar Usuario");
             System.out.println("3.  Modificar Usuario");
@@ -30,7 +30,7 @@ public class ClienteBiblioteca {
             System.out.println("5.  Obtener usuario por ID");            
             System.out.println("6.  Obtener préstamos activos de un usuario desde una fecha");
             System.out.println("7.  Obtener historial de préstamos de un usuario");
-            System.out.println("8.  Obtener últimos 5 préstamos de un usuario");
+            System.out.println("8.  Obtener actividad de un usuario");
 
             System.out.println("9.  Crear Libro");
             System.out.println("10. Eliminar Libro");
@@ -622,10 +622,10 @@ public class ClienteBiblioteca {
                     " | Email: " + email);
     
             System.out.println("\n=== Préstamos Activos ===");
-            mostrarBloque(body, "\"prestamosActivos\":\\[", "]");
+            mostrarBloque(body, "\"activeLoans\":[", "]");
     
             System.out.println("\n=== Últimos 5 Préstamos Devueltos ===");
-            mostrarBloque(body, "\"historialReciente\":\\[", "]");
+            mostrarBloque(body, "\"recentLoans\":[", "]");
         } else {
             System.out.println("Error al consultar actividad: " + response.body());
         }
@@ -649,9 +649,22 @@ public class ClienteBiblioteca {
         }
     }
 
-    private static void mostrarBloque(String body, String inicioClave, String finClave) {
+    private static void mostrarBloque(String body, String claveInicio, String claveFin) {
         try {
-            String bloque = body.split(inicioClave)[1].split(finClave)[0];
+            int inicio = body.indexOf(claveInicio);
+            if (inicio == -1) {
+                System.out.println("No hay datos.");
+                return;
+            }
+    
+            inicio += claveInicio.length();
+            int fin = body.indexOf(claveFin, inicio);
+            if (fin == -1) {
+                System.out.println("No hay datos.");
+                return;
+            }
+    
+            String bloque = body.substring(inicio, fin);
             String[] prestamos = bloque.split("\\{\\\"id\\\":");
     
             for (int i = 1; i < prestamos.length; i++) {
@@ -670,6 +683,7 @@ public class ClienteBiblioteca {
             System.out.println("No hay datos.");
         }
     }
+    
     
     
 }
