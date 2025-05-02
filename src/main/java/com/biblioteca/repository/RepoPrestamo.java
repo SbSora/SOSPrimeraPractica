@@ -38,4 +38,7 @@ public interface RepoPrestamo extends JpaRepository<Prestamo, Long> {
 
     @Query("SELECT p FROM prestamos p WHERE p.usuario.id = :userId")
     List<Prestamo> findByUsuarioId(@Param("userId") Long userId);
+
+    @Query("SELECT p FROM prestamos p WHERE p.libro.id = :bookId")
+    List<Prestamo> findByLibroId(@Param("bookId") Long bookId);
 }

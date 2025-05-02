@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.biblioteca.exception.ResourceNotFoundException;
 import com.biblioteca.model.Libro;
 import com.biblioteca.model.LibroDTO;
+import com.biblioteca.model.Prestamo;
 import com.biblioteca.repository.RepoLibro;
 import com.biblioteca.repository.RepoPrestamo;
 import com.biblioteca.controller.ContLibro;
@@ -102,6 +103,15 @@ public class ServiLibro {
             throw new ResourceNotFoundException("Libro no encontrado");
         }
 
+        // Find all Prestamo records associated with the book
+        List<Prestamo> prestamos = repoPrestamo.findByLibroId(id);
+        // Set libro to null in all associated Prestamo records
+        for (Prestamo prestamo : prestamos) {
+            prestamo.setLibro(null);
+            repoPrestamo.save(prestamo);
+        }
+
+        // Delete the book
         repoLibro.deleteById(id);
     }
 
