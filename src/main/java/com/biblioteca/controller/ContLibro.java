@@ -54,8 +54,12 @@ public class ContLibro {
         PagedModel<EntityModel<LibroDTO>> pagedModel;
         if (title != null) {
             pagedModel = serviLibro.listBooksByTitle(title, pageable);
-        } else if (Boolean.TRUE.equals(available)) {
-            pagedModel = serviLibro.listAvailableBooks(pageable);
+        } else if (available != null) {
+            if (available) {
+                pagedModel = serviLibro.listAvailableBooks(pageable);
+            } else {
+                pagedModel = serviLibro.listUnavailableBooks(pageable);
+            }
         } else {
             pagedModel = serviLibro.listBooks(pageable);
         }

@@ -13,6 +13,8 @@ public interface RepoLibro extends JpaRepository<Libro, Long> {
 
     Page<Libro> findByAvailableTrue(Pageable pageable);
 
+    Page<Libro> findByAvailableFalse(Pageable pageable);
+
     @Query("SELECT b.id FROM libros b ORDER BY b.id")
     List<Long> findAllIds();
 }
