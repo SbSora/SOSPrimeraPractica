@@ -132,6 +132,15 @@ public class ServiLibro {
         });
     }
 
+    public PagedModel<EntityModel<LibroDTO>> listUnavailableBooks(Pageable pageable) {
+        Page<LibroDTO> books = repoLibro.findByAvailableFalse(pageable).map(this::convertToLibroDTO);
+        return bookPagedAssembler.toModel(books, book -> {
+            EntityModel<LibroDTO> resource = EntityModel.of(book);
+            resource.add(linkTo(methodOn(ContLibro.class).getBook(book.getId())).withSelfRel());
+            return resource;
+        });
+    }
+
     private LibroDTO convertToLibroDTO(Libro libro) {
         LibroDTO dto = new LibroDTO();
         dto.setId(libro.getId());
