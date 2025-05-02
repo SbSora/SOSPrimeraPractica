@@ -52,7 +52,9 @@ public class ContLibro {
             @RequestParam(required = false, name = "disponible") Boolean available,
             Pageable pageable) {
         PagedModel<EntityModel<LibroDTO>> pagedModel;
-        if (title != null) {
+        if (title != null && available != null) {
+            pagedModel = serviLibro.listBooksByTitleAndAvailable(title, available, pageable);
+        } else if (title != null) {
             pagedModel = serviLibro.listBooksByTitle(title, pageable);
         } else if (available != null) {
             if (available) {
