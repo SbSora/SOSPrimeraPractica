@@ -121,6 +121,16 @@ public class ServiUsuario {
         if (!repoUsuario.existsById(id)) {
             throw new ResourceNotFoundException("Usuario no encontrado");
         }
+
+        // Find all Prestamo records associated with the user
+        List<Prestamo> prestamos = repoPrestamo.findByUsuarioId(id);
+        // Set usuario to null in all associated Prestamo records
+        for (Prestamo prestamo : prestamos) {
+            prestamo.setUsuario(null);
+            repoPrestamo.save(prestamo);
+        }
+
+        // Delete the user
         repoUsuario.deleteById(id);
     }
 
