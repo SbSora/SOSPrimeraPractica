@@ -171,25 +171,24 @@ public class ServiPrestamo {
         return resource;
     }
 
-    // Methods for ContUsuario
-    public Page<Prestamo> getLoansByUserIdFromDate(Long userId, LocalDate desde, Pageable pageable) {
-        if (!repoUsuario.existsById(userId)) {
-            throw new ResourceNotFoundException("Usuario no encontrado");
+    public PagedModel<EntityModel<PrestamoDTO>> listAllLoans(Pageable pageable) {
+        Page<PrestamoDTO> prestamos = repoPrestamo.findAll(pageable).map(this::convertToPrestamoDTO);
+        if (prestamos.isEmpty()) {
+            throw new ResourceNotFoundException("No loans found");
         }
-        if (desde == null) {
-            desde = LocalDate.of(1970, 1, 1);
-        }
-        return repoPrestamo.findByUserIdAndReturnDateIsNullAndLoanDateGreaterThanEqual(userId, desde, pageable);
+        return prestamoPagedAssembler.toModel(prestamos, prestamoDTO -> {
+            EntityModel<PrestamoDTO> resource = EntityModel.of(prestamoDTO);
+            resource.add(linkTo(methodOn(ContPrestamo.class).getLoan(prestamoDTO.getId())).withSelfRel());
+            if (prestamoDTO.getReturnDate() == null) {
+                resource.add(linkTo(methodOn(ContPrestamo.class).returnBook(prestamoDTO.getId())).withRel("return"));
+                resource.add(linkTo(methodOn(ContPrestamo.class).extendLoan(prestamoDTO.getId())).withRel("extend"));
+            }
+            resource.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(prestamoDTO.getUserId())).withRel("user"));
+            resource.add(linkTo(methodOn(ContLibro.class).getBook(prestamoDTO.getBookId())).withRel("book"));
+            return resource;
+        });
     }
 
-    public List<Prestamo> getLoanHistory(Long userId) {
-        if (!repoUsuario.existsById(userId)) {
-            throw new ResourceNotFoundException("Usuario no encontrado");
-        }
-        return repoPrestamo.findTop5ByUserIdAndReturnDateIsNotNullOrderByReturnDateDesc(userId);
-    }
-
-    // Methods for ContPrestamo
     public PagedModel<EntityModel<PrestamoDTO>> listCurrentLoans(Long userId, Pageable pageable) {
         if (!repoUsuario.existsById(userId)) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -241,6 +240,24 @@ public class ServiPrestamo {
             resource.add(linkTo(methodOn(ContLibro.class).getBook(prestamoDTO.getBookId())).withRel("book"));
             return resource;
         });
+    }
+
+    // Methods for ContUsuario
+    public Page<Prestamo> getLoansByUserIdFromDate(Long userId, LocalDate desde, Pageable pageable) {
+        if (!repoUsuario.existsById(userId)) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
+        }
+        if (desde == null) {
+            desde = LocalDate.of(1970, 1, 1);
+        }
+        return repoPrestamo.findByUserIdAndReturnDateIsNullAndLoanDateGreaterThanEqual(userId, desde, pageable);
+    }
+
+    public List<Prestamo> getLoanHistory(Long userId) {
+        if (!repoUsuario.existsById(userId)) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
+        }
+        return repoPrestamo.findTop5ByUserIdAndReturnDateIsNotNullOrderByReturnDateDesc(userId);
     }
 
     private PrestamoDTO convertToPrestamoDTO(Prestamo prestamo) {
