@@ -15,6 +15,7 @@ import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.Link;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 import com.biblioteca.model.UserActivityDTO;
 import com.biblioteca.controller.ContUsuario;
 import com.biblioteca.controller.ContPrestamo;
+import com.biblioteca.service.ServiPrestamo;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
@@ -90,7 +92,7 @@ public class ServiUsuario {
         UsuarioDTO savedUsuarioDTO = convertToUsuarioDTO(savedUsuario);
         EntityModel<UsuarioDTO> model = EntityModel.of(savedUsuarioDTO);
         model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(savedUsuarioDTO.getId())).withSelfRel());
-        model.add(linkTo(methodOn(ContUsuario.class).getAllUsuarios(Pageable.unpaged())).withRel("users"));
+        model.add(linkTo(methodOn(ContUsuario.class).getAllUsuarios(0, 10)).withRel("users"));
         return model;
     }
 
@@ -140,6 +142,9 @@ public class ServiUsuario {
         }
         Page<PrestamoDTO> prestamoPage = serviPrestamo.getLoansByUserIdFromDate(userId, desde, pageable)
                 .map(this::convertToPrestamoDTO);
+        if (prestamoPage.isEmpty()) {
+            throw new ResourceNotFoundException("No loans found for the user from the specified date");
+        }
         return prestamoPagedAssembler.toModel(prestamoPage, prestamoDTO -> {
             EntityModel<PrestamoDTO> model = EntityModel.of(prestamoDTO);
             if (prestamoDTO.getReturnDate() == null) { // Only add return/extend links for active loans
