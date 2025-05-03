@@ -20,26 +20,26 @@ public class ClienteBiblioteca {
         boolean salir = false;
 
         while (!salir) {
-            System.out.println("\n========== CLIENTE BIBLIOTECA ==========");
-            System.out.println("\n");
-
-            System.out.println("1.  Crear Usuario");
-            System.out.println("2.  Eliminar Usuario");
-            System.out.println("3.  Modificar Usuario");
+            System.out.println("\n========== CLIENTE BIBLIOTECA ==========\n");
+            System.out.println("1.  Añadir usuario nuevo a la aplicación");
+            System.out.println("2.  Modificar datos de un perfil de usuario");
+            System.out.println("3.  Eliminar un usuario");         
             System.out.println("4.  Listar todos los Usuarios");
-            System.out.println("5.  Obtener usuario por ID");            
-            System.out.println("6.  Obtener préstamos activos de un usuario desde una fecha");
-            System.out.println("7.  Obtener historial de préstamos de un usuario");
-            System.out.println("8.  Obtener actividad de un usuario");
+            System.out.println("5.  Consultar usuario por ID");            
+            System.out.println("6.  Consultar préstamos activos de un usuario");
+            System.out.println("7.  Consultar historial de préstamos de un usuario");
+            System.out.println("8.  Consultar actividad de un usuario");
 
-            System.out.println("9.  Crear Libro");
-            System.out.println("10. Eliminar Libro");
-            System.out.println("11. Modificar Libro");
+            System.out.println("9.  Añadir libro a la biblioteca");
+            System.out.println("10. Modificar Libro de la biblioteca");            
+            System.out.println("11. Eliminar Libro de la biblioteca");
+
             System.out.println("12. Listar Libro por patrón de título y disponibilidad");
             
-            System.out.println("13. Crear Préstamo");
-            System.out.println("14. Devolver Préstamo");
-            System.out.println("15. Ampliar Préstamo");
+            System.out.println("13. Crear un préstamo");
+            System.out.println("14. Ampliar un préstamo");            
+            System.out.println("15. Devolver un préstamo");
+
             System.out.println("16. Salir");
             System.out.print("Elige una opción: ");
 
@@ -48,21 +48,21 @@ public class ClienteBiblioteca {
 
             switch (opcion) {
                 case 1 -> crearUsuario();
-                case 2 -> eliminarUsuario();
-                case 3 -> modificarUsuario();
+                case 2 -> modificarUsuario();
+                case 3 -> eliminarUsuario();
                 case 4 -> listarUsuarios();
                 case 5 -> consultarUsuario();
                 case 6 -> consultarPrestamosActivos();
                 case 7 -> consultarHistorialPrestamos();
                 case 8 -> consultarActividadUsuario();
                 case 9 -> crearLibro();
-                case 10 -> eliminarLibro();
-                case 11 -> modificarLibro();
+                case 10 -> modificarLibro();
+                case 11 -> eliminarLibro();
                 case 12 -> listarLibros();
                 case 13 -> crearPrestamo();
-                case 14 -> devolverPrestamo();
-                case 15 -> ampliarPrestamo();
-                case 0 -> salir = true;
+                case 14 -> ampliarPrestamo();
+                case 15 -> devolverPrestamo();
+                case 16 -> salir = true;
                 default -> System.out.println("Opción no válida.");
             }
         }
