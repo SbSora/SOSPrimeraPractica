@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.biblioteca.exception.ResourceNotFoundException;
 import com.biblioteca.model.Libro;
 import com.biblioteca.model.LibroDTO;
+import com.biblioteca.model.Prestamo;
 import com.biblioteca.repository.RepoLibro;
 import com.biblioteca.repository.RepoPrestamo;
 import com.biblioteca.controller.ContLibro;
@@ -102,6 +103,15 @@ public class ServiLibro {
             throw new ResourceNotFoundException("Libro no encontrado");
         }
 
+        // Find all Prestamo records associated with the book
+        List<Prestamo> prestamos = repoPrestamo.findByLibroId(id);
+        // Set libro to null in all associated Prestamo records
+        for (Prestamo prestamo : prestamos) {
+            prestamo.setLibro(null);
+            repoPrestamo.save(prestamo);
+        }
+
+        // Delete the book
         repoLibro.deleteById(id);
     }
 
@@ -116,6 +126,9 @@ public class ServiLibro {
 
     public PagedModel<EntityModel<LibroDTO>> listBooksByTitle(String title, Pageable pageable) {
         Page<LibroDTO> books = repoLibro.findByTitleContaining(title, pageable).map(this::convertToLibroDTO);
+        if (books.isEmpty()) {
+            throw new ResourceNotFoundException("No books found with the title: " + title);
+        }
         return bookPagedAssembler.toModel(books, book -> {
             EntityModel<LibroDTO> resource = EntityModel.of(book);
             resource.add(linkTo(methodOn(ContLibro.class).getBook(book.getId())).withSelfRel());
@@ -134,6 +147,18 @@ public class ServiLibro {
 
     public PagedModel<EntityModel<LibroDTO>> listUnavailableBooks(Pageable pageable) {
         Page<LibroDTO> books = repoLibro.findByAvailableFalse(pageable).map(this::convertToLibroDTO);
+        return bookPagedAssembler.toModel(books, book -> {
+            EntityModel<LibroDTO> resource = EntityModel.of(book);
+            resource.add(linkTo(methodOn(ContLibro.class).getBook(book.getId())).withSelfRel());
+            return resource;
+        });
+    }
+
+    public PagedModel<EntityModel<LibroDTO>> listBooksByTitleAndAvailable(String title, boolean available, Pageable pageable) {
+        Page<LibroDTO> books = repoLibro.findByTitleContainingAndAvailable(title, available, pageable).map(this::convertToLibroDTO);
+        if (books.isEmpty()) {
+            throw new ResourceNotFoundException("No books found with the title: " + title);
+        }
         return bookPagedAssembler.toModel(books, book -> {
             EntityModel<LibroDTO> resource = EntityModel.of(book);
             resource.add(linkTo(methodOn(ContLibro.class).getBook(book.getId())).withSelfRel());
