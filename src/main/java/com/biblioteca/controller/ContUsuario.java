@@ -70,7 +70,7 @@ public class ContUsuario {
     public ResponseEntity<String> deleteUsuario(@PathVariable Long id) {
         try {
             serviUsuario.deleteUsuario(id);
-            return ResponseEntity.ok("User deleted successfully");
+            return ResponseEntity.ok("Usuario eliminado satisfactoriamente");
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (ResourceNotFoundException e) {

@@ -50,10 +50,10 @@ public class ContLibro {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteBook(@PathVariable Long id) {
+    public ResponseEntity<String> deleteBook(@PathVariable Long id) {
         try {
             serviLibro.deleteBook(id);
-            return ResponseEntity.noContent().build();
+            return ResponseEntity.ok("Libro eliminado satisfactoriamente");
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(404).body(null);
         } catch (IllegalStateException e) {

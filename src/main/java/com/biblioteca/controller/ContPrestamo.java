@@ -30,7 +30,7 @@ public class ContPrestamo {
     public ResponseEntity<EntityModel<PrestamoDTO>> borrowBook(@Valid @RequestBody PrestamoDTO prestamoDTO) {
         try {
             if (prestamoDTO.getUserId() == null || prestamoDTO.getBookId() == null) {
-                throw new BadRequestException("User ID and Book ID are required");
+                throw new BadRequestException("Se requieren el ID del usuario y el ID del libro");
             }
             EntityModel<PrestamoDTO> resource = serviPrestamo.borrowBook(prestamoDTO.getUserId(), prestamoDTO.getBookId());
             return ResponseEntity.created(linkTo(methodOn(ContPrestamo.class).getLoan(resource.getContent().getId())).toUri()).body(resource);
@@ -93,7 +93,7 @@ public class ContPrestamo {
                 } else if (startDate != null && endDate != null) {
                     pagedModel = serviPrestamo.listLoansByDateRange(userId, startDate, endDate, pageable);
                 } else {
-                    throw new BadRequestException("Must specify current, historical, or date range parameters when userId is provided");
+                    throw new BadRequestException("Se debe especificar parámetros de actual, histórico o rango de fechas cuando se proporciona un userId.");
                 }
             } else {
                 pagedModel = serviPrestamo.listAllLoans(pageable);
