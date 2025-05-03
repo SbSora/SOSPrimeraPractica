@@ -126,6 +126,9 @@ public class ServiLibro {
 
     public PagedModel<EntityModel<LibroDTO>> listBooksByTitle(String title, Pageable pageable) {
         Page<LibroDTO> books = repoLibro.findByTitleContaining(title, pageable).map(this::convertToLibroDTO);
+        if (books.isEmpty()) {
+            throw new ResourceNotFoundException("No books found with the title: " + title);
+        }
         return bookPagedAssembler.toModel(books, book -> {
             EntityModel<LibroDTO> resource = EntityModel.of(book);
             resource.add(linkTo(methodOn(ContLibro.class).getBook(book.getId())).withSelfRel());
@@ -153,6 +156,9 @@ public class ServiLibro {
 
     public PagedModel<EntityModel<LibroDTO>> listBooksByTitleAndAvailable(String title, boolean available, Pageable pageable) {
         Page<LibroDTO> books = repoLibro.findByTitleContainingAndAvailable(title, available, pageable).map(this::convertToLibroDTO);
+        if (books.isEmpty()) {
+            throw new ResourceNotFoundException("No books found with the title: " + title);
+        }
         return bookPagedAssembler.toModel(books, book -> {
             EntityModel<LibroDTO> resource = EntityModel.of(book);
             resource.add(linkTo(methodOn(ContLibro.class).getBook(book.getId())).withSelfRel());
