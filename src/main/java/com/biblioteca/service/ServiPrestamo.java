@@ -69,13 +69,10 @@ public class ServiPrestamo {
             throw new BadRequestException("El usuario ya tiene el máximo de préstamos activos (3)");
         }
 
-        // Check for penalties
-        activeLoans.getContent().stream()
-                .filter(prestamo -> prestamo.getPenaltyUntil() != null && prestamo.getPenaltyUntil().isAfter(LocalDate.now()))
-                .findFirst()
-                .ifPresent(prestamo -> {
-                    throw new BadRequestException("El usuario tiene una penalización activa hasta " + prestamo.getPenaltyUntil());
-                });
+        // Check for active penalty
+        if (hasActivePenalty(userId)) {
+            throw new BadRequestException("El usuario tiene una penalización activa");
+        }
 
         if (!libro.isAvailable()) {
             throw new BadRequestException("El libro no está disponible");
@@ -174,7 +171,7 @@ public class ServiPrestamo {
     public PagedModel<EntityModel<PrestamoDTO>> listAllLoans(Pageable pageable) {
         Page<PrestamoDTO> prestamos = repoPrestamo.findAll(pageable).map(this::convertToPrestamoDTO);
         if (prestamos.isEmpty()) {
-            throw new ResourceNotFoundException("No se encontraron préstamos");
+            throw new ResourceNotFoundException("No loans found");
         }
         return prestamoPagedAssembler.toModel(prestamos, prestamoDTO -> {
             EntityModel<PrestamoDTO> resource = EntityModel.of(prestamoDTO);
@@ -226,7 +223,7 @@ public class ServiPrestamo {
             throw new ResourceNotFoundException("Usuario no encontrado");
         }
         if (startDate.isAfter(endDate)) {
-            throw new BadRequestException("La fecha de inicio debe ser anterior a la fecha de finalización");
+            throw new BadRequestException("Start date must be before end date");
         }
         Page<PrestamoDTO> prestamos = repoPrestamo.findByUserIdAndLoanDateBetween(userId, startDate, endDate, pageable).map(this::convertToPrestamoDTO);
         return prestamoPagedAssembler.toModel(prestamos, prestamoDTO -> {
@@ -240,6 +237,12 @@ public class ServiPrestamo {
             resource.add(linkTo(methodOn(ContLibro.class).getBook(prestamoDTO.getBookId())).withRel("book"));
             return resource;
         });
+    }
+
+    private boolean hasActivePenalty(Long userId) {
+        List<Prestamo> allLoans = repoPrestamo.findByUsuarioId(userId);
+        return allLoans.stream()
+                .anyMatch(prestamo -> prestamo.getPenaltyUntil() != null && prestamo.getPenaltyUntil().isAfter(LocalDate.now()));
     }
 
     // Methods for ContUsuario
