@@ -96,7 +96,7 @@ public class ServiLibro {
         // Prevent deletion if there are active loans
         boolean hasActiveLoans = repoPrestamo.existsByBookIdAndReturnDateIsNull(id);
         if (hasActiveLoans) {
-            throw new IllegalStateException("Cannot delete book with active loans");
+            throw new IllegalStateException("No se puede eliminar un libro con préstamos activos");
         }
 
         if (!repoLibro.existsById(id)) {
@@ -127,7 +127,7 @@ public class ServiLibro {
     public PagedModel<EntityModel<LibroDTO>> listBooksByTitle(String title, Pageable pageable) {
         Page<LibroDTO> books = repoLibro.findByTitleContaining(title, pageable).map(this::convertToLibroDTO);
         if (books.isEmpty()) {
-            throw new ResourceNotFoundException("No books found with the title: " + title);
+            throw new ResourceNotFoundException("No se encontraron libros con el título: " + title);
         }
         return bookPagedAssembler.toModel(books, book -> {
             EntityModel<LibroDTO> resource = EntityModel.of(book);
@@ -157,7 +157,7 @@ public class ServiLibro {
     public PagedModel<EntityModel<LibroDTO>> listBooksByTitleAndAvailable(String title, boolean available, Pageable pageable) {
         Page<LibroDTO> books = repoLibro.findByTitleContainingAndAvailable(title, available, pageable).map(this::convertToLibroDTO);
         if (books.isEmpty()) {
-            throw new ResourceNotFoundException("No books found with the title: " + title);
+            throw new ResourceNotFoundException("No se encontraron libros con el título: " + title);
         }
         return bookPagedAssembler.toModel(books, book -> {
             EntityModel<LibroDTO> resource = EntityModel.of(book);

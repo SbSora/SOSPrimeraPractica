@@ -118,7 +118,7 @@ public class ServiUsuario {
     public void deleteUsuario(Long id) {
         boolean hasActiveLoans = repoPrestamo.existsByUserIdAndReturnDateIsNull(id);
         if (hasActiveLoans) {
-            throw new IllegalStateException("Cannot delete user with active loans");
+            throw new IllegalStateException("No se puede eliminar un usuario con préstamos activos");
         }
         if (!repoUsuario.existsById(id)) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -143,7 +143,7 @@ public class ServiUsuario {
         Page<PrestamoDTO> prestamoPage = serviPrestamo.getLoansByUserIdFromDate(userId, desde, pageable)
                 .map(this::convertToPrestamoDTO);
         if (prestamoPage.isEmpty()) {
-            throw new ResourceNotFoundException("No loans found for the user from the specified date");
+            throw new ResourceNotFoundException("No se encontraron préstamos para el usuario a partir de la fecha especificada");
         }
         return prestamoPagedAssembler.toModel(prestamoPage, prestamoDTO -> {
             EntityModel<PrestamoDTO> model = EntityModel.of(prestamoDTO);

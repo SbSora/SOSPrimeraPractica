@@ -174,7 +174,7 @@ public class ServiPrestamo {
     public PagedModel<EntityModel<PrestamoDTO>> listAllLoans(Pageable pageable) {
         Page<PrestamoDTO> prestamos = repoPrestamo.findAll(pageable).map(this::convertToPrestamoDTO);
         if (prestamos.isEmpty()) {
-            throw new ResourceNotFoundException("No loans found");
+            throw new ResourceNotFoundException("No se encontraron préstamos");
         }
         return prestamoPagedAssembler.toModel(prestamos, prestamoDTO -> {
             EntityModel<PrestamoDTO> resource = EntityModel.of(prestamoDTO);
@@ -226,7 +226,7 @@ public class ServiPrestamo {
             throw new ResourceNotFoundException("Usuario no encontrado");
         }
         if (startDate.isAfter(endDate)) {
-            throw new BadRequestException("Start date must be before end date");
+            throw new BadRequestException("La fecha de inicio debe ser anterior a la fecha de finalización");
         }
         Page<PrestamoDTO> prestamos = repoPrestamo.findByUserIdAndLoanDateBetween(userId, startDate, endDate, pageable).map(this::convertToPrestamoDTO);
         return prestamoPagedAssembler.toModel(prestamos, prestamoDTO -> {
