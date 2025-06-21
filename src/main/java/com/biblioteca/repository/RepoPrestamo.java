@@ -42,6 +42,6 @@ public interface RepoPrestamo extends JpaRepository<Prestamo, Long> {
     @Query("SELECT p FROM prestamos p WHERE p.libro.id = :bookId")
     List<Prestamo> findByLibroId(@Param("bookId") Long bookId);
 
-    @Query("SELECT COUNT(p) > 0 FROM prestamos p WHERE p.usuario.id = :userId AND p.penaltyDate >= :date")
+    @Query("SELECT COUNT(p) > 0 FROM prestamos p WHERE p.usuario.id = :userId AND p.penaltyUntil >= :date")
     boolean hasActivePenalty(@Param("userId") Long userId, @Param("date") LocalDate date);
 }
