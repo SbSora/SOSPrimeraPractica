@@ -23,14 +23,16 @@ public class ContLibro {
         this.serviLibro = serviLibro;
     }
 
+    // Crear un nuevo libro
     @PostMapping
-    public ResponseEntity<EntityModel<LibroDTO>> addBook(@Valid @RequestBody LibroDTO bookDTO) {
-        EntityModel<LibroDTO> resource = serviLibro.addBook(bookDTO);
-        return ResponseEntity.created(linkTo(methodOn(ContLibro.class).getBook(resource.getContent().getId())).toUri()).body(resource);
+    public ResponseEntity<Void> crearLibro(@Valid @RequestBody LibroDTO libroDTO) {
+        EntityModel<LibroDTO> resource = serviLibro.addBook(libroDTO);
+        return ResponseEntity.created(linkTo(ContLibro.class).slash(resource.getContent().getId()).toUri()).build();
     }
 
+    // Obtener un libro por ID
     @GetMapping("/{id}")
-    public ResponseEntity<EntityModel<LibroDTO>> getBook(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<LibroDTO>> obtenerLibro(@PathVariable Long id) {
         try {
             EntityModel<LibroDTO> resource = serviLibro.getBook(id);
             return ResponseEntity.ok(resource);
@@ -39,41 +41,44 @@ public class ContLibro {
         }
     }
 
+    // Actualizar un libro por ID
     @PutMapping("/{id}")
-    public ResponseEntity<EntityModel<LibroDTO>> updateBook(@PathVariable Long id, @Valid @RequestBody LibroDTO bookDTO) {
+    public ResponseEntity<Void> actualizarLibro(@PathVariable Long id, @Valid @RequestBody LibroDTO libroDTO) {
         try {
-            EntityModel<LibroDTO> resource = serviLibro.updateBook(id, bookDTO);
-            return ResponseEntity.ok(resource);
+            serviLibro.updateBook(id, libroDTO);
+            return ResponseEntity.noContent().build();
         } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(404).body(null);
+            return ResponseEntity.status(404).build();
         }
     }
 
+    // Eliminar un libro por ID
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteBook(@PathVariable Long id) {
+    public ResponseEntity<Void> eliminarLibro(@PathVariable Long id) {
         try {
             serviLibro.deleteBook(id);
             return ResponseEntity.noContent().build();
         } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(404).body(null);
+            return ResponseEntity.status(404).build();
         } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(null);
+            return ResponseEntity.badRequest().build();
         }
     }
 
+    // Listar libros con filtros opcionales
     @GetMapping
-    public ResponseEntity<PagedModel<EntityModel<LibroDTO>>> listBooks(
-            @RequestParam(required = false, name = "titulo") String title,
-            @RequestParam(required = false, name = "disponible") Boolean available,
+    public ResponseEntity<PagedModel<EntityModel<LibroDTO>>> listarLibros(
+            @RequestParam(required = false, name = "titulo") String titulo,
+            @RequestParam(required = false, name = "disponible") Boolean disponible,
             Pageable pageable) {
         try {
             PagedModel<EntityModel<LibroDTO>> pagedModel;
-            if (title != null && available != null) {
-                pagedModel = serviLibro.listBooksByTitleAndAvailable(title, available, pageable);
-            } else if (title != null) {
-                pagedModel = serviLibro.listBooksByTitle(title, pageable);
-            } else if (available != null) {
-                if (available) {
+            if (titulo != null && disponible != null) {
+                pagedModel = serviLibro.listBooksByTitleAndAvailable(titulo, disponible, pageable);
+            } else if (titulo != null) {
+                pagedModel = serviLibro.listBooksByTitle(titulo, pageable);
+            } else if (disponible != null) {
+                if (disponible) {
                     pagedModel = serviLibro.listAvailableBooks(pageable);
                 } else {
                     pagedModel = serviLibro.listUnavailableBooks(pageable);

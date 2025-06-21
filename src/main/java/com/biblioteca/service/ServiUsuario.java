@@ -52,7 +52,7 @@ public class ServiUsuario {
         Page<UsuarioDTO> usuarioPage = repoUsuario.findAll(pageable).map(this::convertToUsuarioDTO);
         return usuarioPagedAssembler.toModel(usuarioPage, usuarioDTO -> {
             EntityModel<UsuarioDTO> model = EntityModel.of(usuarioDTO);
-            model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(usuarioDTO.getId())).withSelfRel());
+            model.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(usuarioDTO.getId())).withSelfRel());
             return model;
         });
     }
@@ -62,11 +62,11 @@ public class ServiUsuario {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
         UsuarioDTO usuarioDTO = convertToUsuarioDTO(usuario);
         EntityModel<UsuarioDTO> model = EntityModel.of(usuarioDTO);
-        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(id)).withSelfRel());
-        model.add(linkTo(methodOn(ContUsuario.class).getUserLoans(id, null, Pageable.unpaged())).withRel("loans"));
-        model.add(linkTo(methodOn(ContUsuario.class).getLoanHistory(id)).withRel("history"));
-        model.add(linkTo(methodOn(ContUsuario.class).getUserActivity(id)).withRel("activity"));
-        model.add(linkTo(methodOn(ContUsuario.class).deleteUsuario(id)).withRel("delete"));
+        model.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(id)).withSelfRel());
+        model.add(linkTo(methodOn(ContUsuario.class).obtenerPrestamosUsuario(id, null, Pageable.unpaged())).withRel("loans"));
+        model.add(linkTo(methodOn(ContUsuario.class).obtenerHistorialPrestamos(id)).withRel("history"));
+        model.add(linkTo(methodOn(ContUsuario.class).obtenerResumenActividad(id)).withRel("activity"));
+        model.add(linkTo(methodOn(ContUsuario.class).eliminarUsuario(id)).withRel("delete"));
         return model;
     }
 
@@ -91,8 +91,8 @@ public class ServiUsuario {
         Usuario savedUsuario = repoUsuario.save(usuario);
         UsuarioDTO savedUsuarioDTO = convertToUsuarioDTO(savedUsuario);
         EntityModel<UsuarioDTO> model = EntityModel.of(savedUsuarioDTO);
-        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(savedUsuarioDTO.getId())).withSelfRel());
-        model.add(linkTo(methodOn(ContUsuario.class).getAllUsuarios(0, 10)).withRel("users"));
+        model.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(savedUsuarioDTO.getId())).withSelfRel());
+        model.add(linkTo(methodOn(ContUsuario.class).listarUsuarios(0, 10)).withRel("users"));
         return model;
     }
 
@@ -109,8 +109,8 @@ public class ServiUsuario {
         Usuario updatedUsuario = repoUsuario.save(usuario);
         UsuarioDTO updatedUsuarioDTO = convertToUsuarioDTO(updatedUsuario);
         EntityModel<UsuarioDTO> model = EntityModel.of(updatedUsuarioDTO);
-        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(updatedUsuarioDTO.getId())).withSelfRel());
-        model.add(linkTo(methodOn(ContUsuario.class).deleteUsuario(updatedUsuarioDTO.getId())).withRel("delete"));
+        model.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(updatedUsuarioDTO.getId())).withSelfRel());
+        model.add(linkTo(methodOn(ContUsuario.class).eliminarUsuario(updatedUsuarioDTO.getId())).withRel("delete"));
         return model;
     }
 
@@ -148,8 +148,8 @@ public class ServiUsuario {
         return prestamoPagedAssembler.toModel(prestamoPage, prestamoDTO -> {
             EntityModel<PrestamoDTO> model = EntityModel.of(prestamoDTO);
             if (prestamoDTO.getReturnDate() == null) { // Only add return/extend links for active loans
-                model.add(linkTo(methodOn(ContPrestamo.class).returnBook(prestamoDTO.getId())).withRel("return"));
-                model.add(linkTo(methodOn(ContPrestamo.class).extendLoan(prestamoDTO.getId())).withRel("extend"));
+                model.add(linkTo(methodOn(ContPrestamo.class).actualizarEstadoDevolucion(prestamoDTO.getId())).withRel("return"));
+                model.add(linkTo(methodOn(ContPrestamo.class).actualizarFechaVencimiento(prestamoDTO.getId())).withRel("extend"));
             }
             return model;
         });
@@ -164,8 +164,8 @@ public class ServiUsuario {
                 .map(prestamoDTO -> EntityModel.of(prestamoDTO))
                 .collect(Collectors.toList());
         CollectionModel<EntityModel<PrestamoDTO>> model = CollectionModel.of(prestamoModels);
-        model.add(linkTo(methodOn(ContUsuario.class).getLoanHistory(userId)).withSelfRel());
-        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(userId)).withRel("user"));
+        model.add(linkTo(methodOn(ContUsuario.class).obtenerHistorialPrestamos(userId)).withSelfRel());
+        model.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(userId)).withRel("user"));
         return model;
     }
 
@@ -180,8 +180,8 @@ public class ServiUsuario {
                 .map(prestamoDTO -> {
                     EntityModel<PrestamoDTO> model = EntityModel.of(prestamoDTO);
                     if (prestamoDTO.getReturnDate() == null) { // Only add return/extend links for active loans
-                        model.add(linkTo(methodOn(ContPrestamo.class).returnBook(prestamoDTO.getId())).withRel("return"));
-                        model.add(linkTo(methodOn(ContPrestamo.class).extendLoan(prestamoDTO.getId())).withRel("extend"));
+                        model.add(linkTo(methodOn(ContPrestamo.class).actualizarEstadoDevolucion(prestamoDTO.getId())).withRel("return"));
+                        model.add(linkTo(methodOn(ContPrestamo.class).actualizarFechaVencimiento(prestamoDTO.getId())).withRel("extend"));
                     }
                     return model;
                 })
@@ -196,9 +196,9 @@ public class ServiUsuario {
                 activeLoans.stream().map(EntityModel::getContent).collect(Collectors.toList()), 
                 recentLoans.stream().map(EntityModel::getContent).collect(Collectors.toList()));
         EntityModel<UserActivityDTO> model = EntityModel.of(activityDTO);
-        model.add(linkTo(methodOn(ContUsuario.class).getUserActivity(userId)).withSelfRel());
-        model.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(userId)).withRel("user"));
-        model.add(linkTo(methodOn(ContUsuario.class).getUserLoans(userId, null, Pageable.unpaged())).withRel("loans"));
+        model.add(linkTo(methodOn(ContUsuario.class).obtenerResumenActividad(userId)).withSelfRel());
+        model.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(userId)).withRel("user"));
+        model.add(linkTo(methodOn(ContUsuario.class).obtenerPrestamosUsuario(userId, null, Pageable.unpaged())).withRel("loans"));
         return model;
     }
 

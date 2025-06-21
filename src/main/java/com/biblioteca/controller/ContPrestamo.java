@@ -26,57 +26,69 @@ public class ContPrestamo {
         this.serviPrestamo = serviPrestamo;
     }
 
+    // Crear un nuevo préstamo
     @PostMapping
-    public ResponseEntity<EntityModel<PrestamoDTO>> borrowBook(@Valid @RequestBody PrestamoDTO prestamoDTO) {
+    public ResponseEntity<Void> crearPrestamo(@Valid @RequestBody PrestamoDTO prestamoDTO) {
         try {
             if (prestamoDTO.getUserId() == null || prestamoDTO.getBookId() == null) {
                 throw new BadRequestException("User ID and Book ID are required");
             }
             EntityModel<PrestamoDTO> resource = serviPrestamo.borrowBook(prestamoDTO.getUserId(), prestamoDTO.getBookId());
-            return ResponseEntity.created(linkTo(methodOn(ContPrestamo.class).getLoan(resource.getContent().getId())).toUri()).body(resource);
+            PrestamoDTO content = resource.getContent();
+            if (content == null || content.getId() == null) {
+                throw new ResourceNotFoundException("Resource content or ID is null");
+            }
+            return ResponseEntity.created(linkTo(ContPrestamo.class).slash(content.getId()).toUri()).build();
         } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(404).body(null);
+            return ResponseEntity.status(404).build();
         } catch (BadRequestException e) {
-            return ResponseEntity.badRequest().body(null);
+            return ResponseEntity.badRequest().build();
         }
     }
 
+    // Obtener un préstamo por ID
     @GetMapping("/{id}")
-    public ResponseEntity<EntityModel<PrestamoDTO>> getLoan(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<PrestamoDTO>> obtenerPrestamo(@PathVariable Long id) {
         try {
-            EntityModel<PrestamoDTO> resource = serviPrestamo.getLoan(id);
+            EntityModel<PrestamoDTO> resource = serviPrestamo.obtenerPrestamo(id);
+            resource.add(linkTo(methodOn(ContPrestamo.class).obtenerPrestamo(id)).withSelfRel());
+            resource.add(linkTo(methodOn(ContPrestamo.class).actualizarEstadoDevolucion(id)).withRel("estado"));
+            resource.add(linkTo(methodOn(ContPrestamo.class).actualizarFechaVencimiento(id)).withRel("fecha"));
             return ResponseEntity.ok(resource);
         } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(404).body(null);
+            return ResponseEntity.status(404).build();
         }
     }
 
-    @PutMapping("/{id}/devolver")
-    public ResponseEntity<EntityModel<PrestamoDTO>> returnBook(@PathVariable Long id) {
+    // Actualizar el estado de devolución de un préstamo
+    @PutMapping("/{id}/estado")
+    public ResponseEntity<Void> actualizarEstadoDevolucion(@PathVariable Long id) {
         try {
-            EntityModel<PrestamoDTO> resource = serviPrestamo.returnBook(id);
-            return ResponseEntity.ok(resource);
+            serviPrestamo.returnBook(id);
+            return ResponseEntity.noContent().build();
         } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(404).body(null);
+            return ResponseEntity.status(404).build();
         } catch (BadRequestException e) {
-            return ResponseEntity.badRequest().body(null);
+            return ResponseEntity.badRequest().build();
         }
     }
 
-    @PutMapping("/{id}/ampliar")
-    public ResponseEntity<EntityModel<PrestamoDTO>> extendLoan(@PathVariable Long id) {
+    // Actualizar la fecha de vencimiento de un préstamo
+    @PutMapping("/{id}/fecha")
+    public ResponseEntity<Void> actualizarFechaVencimiento(@PathVariable Long id) {
         try {
-            EntityModel<PrestamoDTO> resource = serviPrestamo.extendLoan(id);
-            return ResponseEntity.ok(resource);
+            serviPrestamo.extendLoan(id);
+            return ResponseEntity.noContent().build();
         } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(404).body(null);
+            return ResponseEntity.status(404).build();
         } catch (BadRequestException e) {
-            return ResponseEntity.badRequest().body(null);
+            return ResponseEntity.badRequest().build();
         }
     }
 
+    // Listar préstamos con filtros opcionales
     @GetMapping
-    public ResponseEntity<PagedModel<EntityModel<PrestamoDTO>>> listLoans(
+    public ResponseEntity<PagedModel<EntityModel<PrestamoDTO>>> listarPrestamos(
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) Boolean current,
             @RequestParam(required = false) Boolean historical,
@@ -85,6 +97,9 @@ public class ContPrestamo {
             Pageable pageable) {
         try {
             PagedModel<EntityModel<PrestamoDTO>> pagedModel;
+            if (userId != null && startDate != null && endDate != null && startDate.isAfter(endDate)) {
+                throw new BadRequestException("La fecha de inicio debe ser anterior a la fecha de fin");
+            }
             if (userId != null) {
                 if (Boolean.TRUE.equals(current)) {
                     pagedModel = serviPrestamo.listCurrentLoans(userId, pageable);
@@ -100,9 +115,9 @@ public class ContPrestamo {
             }
             return ResponseEntity.ok(pagedModel);
         } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(404).body(null);
+            return ResponseEntity.status(404).build();
         } catch (BadRequestException e) {
-            return ResponseEntity.badRequest().body(null);
+            return ResponseEntity.badRequest().build();
         }
     }
 }

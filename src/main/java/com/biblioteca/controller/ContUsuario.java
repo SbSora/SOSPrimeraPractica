@@ -30,8 +30,9 @@ public class ContUsuario {
     @Autowired
     private ServiUsuario serviUsuario;
 
+    // Listar todos los usuarios
     @GetMapping
-    public ResponseEntity<PagedModel<EntityModel<UsuarioDTO>>> getAllUsuarios(
+    public ResponseEntity<PagedModel<EntityModel<UsuarioDTO>>> listarUsuarios(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         if (page < 0) {
@@ -41,8 +42,9 @@ public class ContUsuario {
         return ResponseEntity.ok(serviUsuario.getAllUsuarios(pageable));
     }
 
+    // Obtener un usuario por ID
     @GetMapping("/{id}")
-    public ResponseEntity<EntityModel<UsuarioDTO>> getUsuarioById(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<UsuarioDTO>> obtenerUsuario(@PathVariable Long id) {
         try {
             return ResponseEntity.ok(serviUsuario.getUsuarioById(id));
         } catch (ResourceNotFoundException e) {
@@ -50,14 +52,20 @@ public class ContUsuario {
         }
     }
 
+    // Crear un nuevo usuario
     @PostMapping
-    public ResponseEntity<EntityModel<UsuarioDTO>> createUsuario(@Valid @RequestBody UsuarioDTO usuarioDTO) {
+    public ResponseEntity<EntityModel<UsuarioDTO>> crearUsuario(@Valid @RequestBody UsuarioDTO usuarioDTO) {
         EntityModel<UsuarioDTO> resource = serviUsuario.createUsuario(usuarioDTO);
-        return ResponseEntity.created(linkTo(methodOn(ContUsuario.class).getUsuarioById(resource.getContent().getId())).toUri()).body(resource);
+        UsuarioDTO content = resource.getContent();
+        if (content == null || content.getId() == null) {
+            throw new ResourceNotFoundException("Resource content or ID is null");
+        }
+        return ResponseEntity.created(linkTo(methodOn(ContUsuario.class).obtenerUsuario(content.getId())).toUri()).body(resource);
     }
 
+    // Actualizar un usuario por ID
     @PutMapping("/{id}")
-    public ResponseEntity<EntityModel<UsuarioDTO>> updateUsuario(@PathVariable Long id, @Valid @RequestBody UsuarioDTO usuarioDTO) {
+    public ResponseEntity<EntityModel<UsuarioDTO>> actualizarUsuario(@PathVariable Long id, @Valid @RequestBody UsuarioDTO usuarioDTO) {
         try {
             usuarioDTO.setId(id);
             return ResponseEntity.ok(serviUsuario.updateUsuario(usuarioDTO));
@@ -66,11 +74,12 @@ public class ContUsuario {
         }
     }
 
+    // Eliminar un usuario por ID
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteUsuario(@PathVariable Long id) {
+    public ResponseEntity<String> eliminarUsuario(@PathVariable Long id) {
         try {
             serviUsuario.deleteUsuario(id);
-            return ResponseEntity.ok("User deleted successfully");
+            return ResponseEntity.ok("Usuario eliminado correctamente");
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (ResourceNotFoundException e) {
@@ -78,8 +87,9 @@ public class ContUsuario {
         }
     }
 
+    // Obtener préstamos de un usuario
     @GetMapping("/{id}/prestamos")
-    public ResponseEntity<PagedModel<EntityModel<PrestamoDTO>>> getUserLoans(
+    public ResponseEntity<PagedModel<EntityModel<PrestamoDTO>>> obtenerPrestamosUsuario(
             @PathVariable Long id,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             Pageable pageable) {
@@ -91,8 +101,9 @@ public class ContUsuario {
         }
     }
 
+    // Obtener historial de préstamos de un usuario
     @GetMapping("/{id}/historial")
-    public ResponseEntity<CollectionModel<EntityModel<PrestamoDTO>>> getLoanHistory(@PathVariable Long id) {
+    public ResponseEntity<CollectionModel<EntityModel<PrestamoDTO>>> obtenerHistorialPrestamos(@PathVariable Long id) {
         try {
             CollectionModel<EntityModel<PrestamoDTO>> historial = serviUsuario.getLoanHistory(id);
             return ResponseEntity.ok(historial);
@@ -101,8 +112,9 @@ public class ContUsuario {
         }
     }
 
+    // Obtener resumen de actividad de un usuario
     @GetMapping("/{id}/actividad")
-    public ResponseEntity<EntityModel<UserActivityDTO>> getUserActivity(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<UserActivityDTO>> obtenerResumenActividad(@PathVariable Long id) {
         try {
             EntityModel<UserActivityDTO> actividad = serviUsuario.getUserActivitySummary(id);
             return ResponseEntity.ok(actividad);
