@@ -41,19 +41,19 @@ public class ServiPrestamo {
         this.prestamoPagedAssembler = prestamoPagedAssembler;
     }
 
-    public EntityModel<PrestamoDTO> getLoan(Long id) {
+    public EntityModel<PrestamoDTO> obtenerPrestamo(Long id) {
         Prestamo prestamo = repoPrestamo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Prestamo no encontrado"));
-        PrestamoDTO dto = convertToPrestamoDTO(prestamo);
-        EntityModel<PrestamoDTO> resource = EntityModel.of(dto);
-        resource.add(linkTo(methodOn(ContPrestamo.class).getLoan(id)).withSelfRel());
-        if (dto.getReturnDate() == null) { // Only add return/extend links for active loans
-            resource.add(linkTo(methodOn(ContPrestamo.class).returnBook(id)).withRel("return"));
-            resource.add(linkTo(methodOn(ContPrestamo.class).extendLoan(id)).withRel("extend"));
+        PrestamoDTO dto = convertToPrestamoDTO(prestamo); // Change made here
+        EntityModel<PrestamoDTO> recurso = EntityModel.of(dto);
+        recurso.add(linkTo(methodOn(ContPrestamo.class).obtenerPrestamo(id)).withSelfRel());
+        if (dto.getReturnDate() == null) {
+            recurso.add(linkTo(methodOn(ContPrestamo.class).actualizarEstadoDevolucion(id)).withRel("estado"));
+            recurso.add(linkTo(methodOn(ContPrestamo.class).actualizarFechaVencimiento(id)).withRel("fecha"));
         }
-        resource.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(dto.getUserId())).withRel("user"));
-        resource.add(linkTo(methodOn(ContLibro.class).getBook(dto.getBookId())).withRel("book"));
-        return resource;
+        recurso.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(dto.getUserId())).withRel("usuario"));
+        recurso.add(linkTo(methodOn(ContLibro.class).obtenerLibro(dto.getBookId())).withRel("libro"));
+        return recurso;
     }
 
     @Transactional
@@ -63,13 +63,11 @@ public class ServiPrestamo {
         Libro libro = repoLibro.findById(bookId)
                 .orElseThrow(() -> new ResourceNotFoundException("Libro no encontrado"));
 
-        // Check for maximum active loans (e.g., 3)
         Page<Prestamo> activeLoans = repoPrestamo.findByUserIdAndReturnDateIsNull(userId, Pageable.unpaged());
         if (activeLoans.getTotalElements() >= 3) {
             throw new BadRequestException("El usuario ya tiene el máximo de préstamos activos (3)");
         }
 
-        // Check for active penalty
         if (hasActivePenalty(userId)) {
             throw new BadRequestException("El usuario tiene una penalización activa");
         }
@@ -93,11 +91,11 @@ public class ServiPrestamo {
 
         PrestamoDTO dto = convertToPrestamoDTO(savedPrestamo);
         EntityModel<PrestamoDTO> resource = EntityModel.of(dto);
-        resource.add(linkTo(methodOn(ContPrestamo.class).getLoan(dto.getId())).withSelfRel());
-        resource.add(linkTo(methodOn(ContPrestamo.class).returnBook(dto.getId())).withRel("return"));
-        resource.add(linkTo(methodOn(ContPrestamo.class).extendLoan(dto.getId())).withRel("extend"));
-        resource.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(dto.getUserId())).withRel("user"));
-        resource.add(linkTo(methodOn(ContLibro.class).getBook(dto.getBookId())).withRel("book"));
+        resource.add(linkTo(methodOn(ContPrestamo.class).obtenerPrestamo(dto.getId())).withSelfRel());
+        resource.add(linkTo(methodOn(ContPrestamo.class).actualizarEstadoDevolucion(dto.getId())).withRel("estado"));
+        resource.add(linkTo(methodOn(ContPrestamo.class).actualizarFechaVencimiento(dto.getId())).withRel("fecha"));
+        resource.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(dto.getUserId())).withRel("usuario"));
+        resource.add(linkTo(methodOn(ContLibro.class).obtenerLibro(dto.getBookId())).withRel("libro"));
         return resource;
     }
 
@@ -135,10 +133,9 @@ public class ServiPrestamo {
 
         PrestamoDTO dto = convertToPrestamoDTO(updatedPrestamo);
         EntityModel<PrestamoDTO> resource = EntityModel.of(dto);
-        resource.add(linkTo(methodOn(ContPrestamo.class).getLoan(dto.getId())).withSelfRel());
-        resource.add(linkTo(methodOn(ContUsuario.class).getUserLoans(dto.getUserId(), null, Pageable.unpaged())).withRel("user-loans"));
-        resource.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(dto.getUserId())).withRel("user"));
-        resource.add(linkTo(methodOn(ContLibro.class).getBook(dto.getBookId())).withRel("book"));
+        resource.add(linkTo(methodOn(ContPrestamo.class).obtenerPrestamo(dto.getId())).withSelfRel());
+        resource.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(dto.getUserId())).withRel("usuario"));
+        resource.add(linkTo(methodOn(ContLibro.class).obtenerLibro(dto.getBookId())).withRel("libro"));
         return resource;
     }
 
@@ -160,11 +157,11 @@ public class ServiPrestamo {
 
         PrestamoDTO dto = convertToPrestamoDTO(updatedPrestamo);
         EntityModel<PrestamoDTO> resource = EntityModel.of(dto);
-        resource.add(linkTo(methodOn(ContPrestamo.class).getLoan(dto.getId())).withSelfRel());
-        resource.add(linkTo(methodOn(ContPrestamo.class).returnBook(dto.getId())).withRel("return"));
-        resource.add(linkTo(methodOn(ContUsuario.class).getUserLoans(dto.getUserId(), null, Pageable.unpaged())).withRel("user-loans"));
-        resource.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(dto.getUserId())).withRel("user"));
-        resource.add(linkTo(methodOn(ContLibro.class).getBook(dto.getBookId())).withRel("book"));
+        resource.add(linkTo(methodOn(ContPrestamo.class).obtenerPrestamo(dto.getId())).withSelfRel());
+        resource.add(linkTo(methodOn(ContPrestamo.class).actualizarEstadoDevolucion(dto.getId())).withRel("estado"));
+        resource.add(linkTo(methodOn(ContPrestamo.class).actualizarFechaVencimiento(dto.getId())).withRel("fecha"));
+        resource.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(dto.getUserId())).withRel("usuario"));
+        resource.add(linkTo(methodOn(ContLibro.class).obtenerLibro(dto.getBookId())).withRel("libro"));
         return resource;
     }
 
@@ -175,13 +172,13 @@ public class ServiPrestamo {
         }
         return prestamoPagedAssembler.toModel(prestamos, prestamoDTO -> {
             EntityModel<PrestamoDTO> resource = EntityModel.of(prestamoDTO);
-            resource.add(linkTo(methodOn(ContPrestamo.class).getLoan(prestamoDTO.getId())).withSelfRel());
+            resource.add(linkTo(methodOn(ContPrestamo.class).obtenerPrestamo(prestamoDTO.getId())).withSelfRel());
             if (prestamoDTO.getReturnDate() == null) {
-                resource.add(linkTo(methodOn(ContPrestamo.class).returnBook(prestamoDTO.getId())).withRel("return"));
-                resource.add(linkTo(methodOn(ContPrestamo.class).extendLoan(prestamoDTO.getId())).withRel("extend"));
+                resource.add(linkTo(methodOn(ContPrestamo.class).actualizarEstadoDevolucion(prestamoDTO.getId())).withRel("estado"));
+                resource.add(linkTo(methodOn(ContPrestamo.class).actualizarFechaVencimiento(prestamoDTO.getId())).withRel("fecha"));
             }
-            resource.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(prestamoDTO.getUserId())).withRel("user"));
-            resource.add(linkTo(methodOn(ContLibro.class).getBook(prestamoDTO.getBookId())).withRel("book"));
+            resource.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(prestamoDTO.getUserId())).withRel("usuario"));
+            resource.add(linkTo(methodOn(ContLibro.class).obtenerLibro(prestamoDTO.getBookId())).withRel("libro"));
             return resource;
         });
     }
@@ -193,13 +190,13 @@ public class ServiPrestamo {
         Page<PrestamoDTO> prestamos = repoPrestamo.findByUserIdAndReturnDateIsNull(userId, pageable).map(this::convertToPrestamoDTO);
         return prestamoPagedAssembler.toModel(prestamos, prestamoDTO -> {
             EntityModel<PrestamoDTO> resource = EntityModel.of(prestamoDTO);
-            resource.add(linkTo(methodOn(ContPrestamo.class).getLoan(prestamoDTO.getId())).withSelfRel());
+            resource.add(linkTo(methodOn(ContPrestamo.class).obtenerPrestamo(prestamoDTO.getId())).withSelfRel());
             if (prestamoDTO.getReturnDate() == null) {
-                resource.add(linkTo(methodOn(ContPrestamo.class).returnBook(prestamoDTO.getId())).withRel("return"));
-                resource.add(linkTo(methodOn(ContPrestamo.class).extendLoan(prestamoDTO.getId())).withRel("extend"));
+                resource.add(linkTo(methodOn(ContPrestamo.class).actualizarEstadoDevolucion(prestamoDTO.getId())).withRel("estado"));
+                resource.add(linkTo(methodOn(ContPrestamo.class).actualizarFechaVencimiento(prestamoDTO.getId())).withRel("fecha"));
             }
-            resource.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(prestamoDTO.getUserId())).withRel("user"));
-            resource.add(linkTo(methodOn(ContLibro.class).getBook(prestamoDTO.getBookId())).withRel("book"));
+            resource.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(prestamoDTO.getUserId())).withRel("usuario"));
+            resource.add(linkTo(methodOn(ContLibro.class).obtenerLibro(prestamoDTO.getBookId())).withRel("libro"));
             return resource;
         });
     }
@@ -211,9 +208,9 @@ public class ServiPrestamo {
         Page<PrestamoDTO> prestamos = repoPrestamo.findByUserIdAndReturnDateIsNotNull(userId, pageable).map(this::convertToPrestamoDTO);
         return prestamoPagedAssembler.toModel(prestamos, prestamoDTO -> {
             EntityModel<PrestamoDTO> resource = EntityModel.of(prestamoDTO);
-            resource.add(linkTo(methodOn(ContPrestamo.class).getLoan(prestamoDTO.getId())).withSelfRel());
-            resource.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(prestamoDTO.getUserId())).withRel("user"));
-            resource.add(linkTo(methodOn(ContLibro.class).getBook(prestamoDTO.getBookId())).withRel("book"));
+            resource.add(linkTo(methodOn(ContPrestamo.class).obtenerPrestamo(prestamoDTO.getId())).withSelfRel());
+            resource.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(prestamoDTO.getUserId())).withRel("usuario"));
+            resource.add(linkTo(methodOn(ContLibro.class).obtenerLibro(prestamoDTO.getBookId())).withRel("libro"));
             return resource;
         });
     }
@@ -222,27 +219,28 @@ public class ServiPrestamo {
         if (!repoUsuario.existsById(userId)) {
             throw new ResourceNotFoundException("Usuario no encontrado");
         }
+        if (startDate == null || endDate == null) {
+            throw new BadRequestException("Las fechas de inicio y fin son obligatorias");
+        }
         if (startDate.isAfter(endDate)) {
-            throw new BadRequestException("Start date must be before end date");
+            throw new BadRequestException("La fecha de inicio debe ser anterior a la fecha de fin");
         }
         Page<PrestamoDTO> prestamos = repoPrestamo.findByUserIdAndLoanDateBetween(userId, startDate, endDate, pageable).map(this::convertToPrestamoDTO);
         return prestamoPagedAssembler.toModel(prestamos, prestamoDTO -> {
             EntityModel<PrestamoDTO> resource = EntityModel.of(prestamoDTO);
-            resource.add(linkTo(methodOn(ContPrestamo.class).getLoan(prestamoDTO.getId())).withSelfRel());
+            resource.add(linkTo(methodOn(ContPrestamo.class).obtenerPrestamo(prestamoDTO.getId())).withSelfRel());
             if (prestamoDTO.getReturnDate() == null) {
-                resource.add(linkTo(methodOn(ContPrestamo.class).returnBook(prestamoDTO.getId())).withRel("return"));
-                resource.add(linkTo(methodOn(ContPrestamo.class).extendLoan(prestamoDTO.getId())).withRel("extend"));
+                resource.add(linkTo(methodOn(ContPrestamo.class).actualizarEstadoDevolucion(prestamoDTO.getId())).withRel("estado"));
+                resource.add(linkTo(methodOn(ContPrestamo.class).actualizarFechaVencimiento(prestamoDTO.getId())).withRel("fecha"));
             }
-            resource.add(linkTo(methodOn(ContUsuario.class).getUsuarioById(prestamoDTO.getUserId())).withRel("user"));
-            resource.add(linkTo(methodOn(ContLibro.class).getBook(prestamoDTO.getBookId())).withRel("book"));
+            resource.add(linkTo(methodOn(ContUsuario.class).obtenerUsuario(prestamoDTO.getUserId())).withRel("usuario"));
+            resource.add(linkTo(methodOn(ContLibro.class).obtenerLibro(prestamoDTO.getBookId())).withRel("libro"));
             return resource;
         });
     }
 
     private boolean hasActivePenalty(Long userId) {
-        List<Prestamo> allLoans = repoPrestamo.findByUsuarioId(userId);
-        return allLoans.stream()
-                .anyMatch(prestamo -> prestamo.getPenaltyUntil() != null && prestamo.getPenaltyUntil().isAfter(LocalDate.now()));
+        return repoPrestamo.hasActivePenalty(userId, LocalDate.now());
     }
 
     // Methods for ContUsuario
