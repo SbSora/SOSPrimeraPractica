@@ -11,11 +11,11 @@ public class Prestamo {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = true)
     private Usuario usuario;
 
     @ManyToOne
-    @JoinColumn(name = "book_id")
+    @JoinColumn(name = "book_id", nullable = true)
     private Libro libro;
 
     @Column(name = "loan_date", nullable = false)

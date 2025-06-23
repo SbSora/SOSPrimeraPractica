@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import com.biblioteca.model.PrestamoDTO;
 import com.biblioteca.service.ServiPrestamo;
 import com.biblioteca.exception.BadRequestException;
+import com.biblioteca.exception.ResourceNotFoundException;
 
 import java.time.LocalDate;
 
@@ -25,51 +26,98 @@ public class ContPrestamo {
         this.serviPrestamo = serviPrestamo;
     }
 
+    // Crear un nuevo préstamo
     @PostMapping
-    public ResponseEntity<EntityModel<PrestamoDTO>> borrowBook(@Valid @RequestBody PrestamoDTO prestamoDTO) {
-        if (prestamoDTO.getUserId() == null || prestamoDTO.getBookId() == null) {
-            throw new BadRequestException("User ID and Book ID are required");
+    public ResponseEntity<Void> crearPrestamo(@Valid @RequestBody PrestamoDTO prestamoDTO) {
+        try {
+            if (prestamoDTO.getUserId() == null || prestamoDTO.getBookId() == null) {
+                throw new BadRequestException("Se requieren el ID del usuario y el ID del libro");
+            }
+            EntityModel<PrestamoDTO> resource = serviPrestamo.borrowBook(prestamoDTO.getUserId(), prestamoDTO.getBookId());
+            PrestamoDTO content = resource.getContent();
+            if (content == null || content.getId() == null) {
+                throw new ResourceNotFoundException("Resource content or ID is null");
+            }
+            return ResponseEntity.created(linkTo(ContPrestamo.class).slash(content.getId()).toUri()).build();
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404).build();
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().build();
         }
-        EntityModel<PrestamoDTO> resource = serviPrestamo.borrowBook(prestamoDTO.getUserId(), prestamoDTO.getBookId());
-        return ResponseEntity.created(linkTo(methodOn(ContPrestamo.class).getLoan(resource.getContent().getId())).toUri()).body(resource);
     }
 
+    // Obtener un préstamo por ID
     @GetMapping("/{id}")
-    public ResponseEntity<EntityModel<PrestamoDTO>> getLoan(@PathVariable Long id) {
-        EntityModel<PrestamoDTO> resource = serviPrestamo.getLoan(id);
-        return ResponseEntity.ok(resource);
+    public ResponseEntity<EntityModel<PrestamoDTO>> obtenerPrestamo(@PathVariable Long id) {
+        try {
+            EntityModel<PrestamoDTO> resource = serviPrestamo.obtenerPrestamo(id);
+            resource.add(linkTo(methodOn(ContPrestamo.class).obtenerPrestamo(id)).withSelfRel());
+            resource.add(linkTo(methodOn(ContPrestamo.class).actualizarEstadoDevolucion(id)).withRel("estado"));
+            resource.add(linkTo(methodOn(ContPrestamo.class).actualizarFechaVencimiento(id)).withRel("fecha"));
+            return ResponseEntity.ok(resource);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404).build();
+        }
     }
 
-    @PutMapping("/{id}/devolver")
-    public ResponseEntity<EntityModel<PrestamoDTO>> returnBook(@PathVariable Long id) {
-        EntityModel<PrestamoDTO> resource = serviPrestamo.returnBook(id);
-        return ResponseEntity.ok(resource);
+    // Actualizar el estado de devolución de un préstamo
+    @PutMapping("/{id}/estado")
+    public ResponseEntity<Void> actualizarEstadoDevolucion(@PathVariable Long id) {
+        try {
+            serviPrestamo.returnBook(id);
+            return ResponseEntity.noContent().build();
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404).build();
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
-    @PutMapping("/{id}/ampliar")
-    public ResponseEntity<EntityModel<PrestamoDTO>> extendLoan(@PathVariable Long id) {
-        EntityModel<PrestamoDTO> resource = serviPrestamo.extendLoan(id);
-        return ResponseEntity.ok(resource);
+    // Actualizar la fecha de vencimiento de un préstamo
+    @PutMapping("/{id}/fecha")
+    public ResponseEntity<Void> actualizarFechaVencimiento(@PathVariable Long id) {
+        try {
+            serviPrestamo.extendLoan(id);
+            return ResponseEntity.noContent().build();
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404).build();
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
+    // Listar préstamos con filtros opcionales
     @GetMapping
-    public ResponseEntity<PagedModel<EntityModel<PrestamoDTO>>> listLoans(
-            @RequestParam Long userId,
+    public ResponseEntity<PagedModel<EntityModel<PrestamoDTO>>> listarPrestamos(
+            @RequestParam(required = false) Long userId,
             @RequestParam(required = false) Boolean current,
             @RequestParam(required = false) Boolean historical,
             @RequestParam(required = false) LocalDate startDate,
             @RequestParam(required = false) LocalDate endDate,
             Pageable pageable) {
-        PagedModel<EntityModel<PrestamoDTO>> pagedModel;
-        if (Boolean.TRUE.equals(current)) {
-            pagedModel = serviPrestamo.listCurrentLoans(userId, pageable);
-        } else if (Boolean.TRUE.equals(historical)) {
-            pagedModel = serviPrestamo.listHistoricalLoans(userId, pageable);
-        } else if (startDate != null && endDate != null) {
-            pagedModel = serviPrestamo.listLoansByDateRange(userId, startDate, endDate, pageable);
-        } else {
-            throw new BadRequestException("Must specify current, historical, or date range parameters");
+        try {
+            PagedModel<EntityModel<PrestamoDTO>> pagedModel;
+            if (userId != null && startDate != null && endDate != null && startDate.isAfter(endDate)) {
+                throw new BadRequestException("La fecha de inicio debe ser anterior a la fecha de fin");
+            }
+            if (userId != null) {
+                if (Boolean.TRUE.equals(current)) {
+                    pagedModel = serviPrestamo.listCurrentLoans(userId, pageable);
+                } else if (Boolean.TRUE.equals(historical)) {
+                    pagedModel = serviPrestamo.listHistoricalLoans(userId, pageable);
+                } else if (startDate != null && endDate != null) {
+                    pagedModel = serviPrestamo.listLoansByDateRange(userId, startDate, endDate, pageable);
+                } else {
+                    throw new BadRequestException("Se debe especificar parámetros de actual, histórico o rango de fechas cuando se proporciona un userId.");
+                }
+            } else {
+                pagedModel = serviPrestamo.listAllLoans(pageable);
+            }
+            return ResponseEntity.ok(pagedModel);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404).build();
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(pagedModel);
     }
 }
