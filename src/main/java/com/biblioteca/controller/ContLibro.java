@@ -25,9 +25,9 @@ public class ContLibro {
 
     // Crear un nuevo libro
     @PostMapping
-    public ResponseEntity<Void> crearLibro(@Valid @RequestBody LibroDTO libroDTO) {
+    public ResponseEntity<EntityModel<LibroDTO>> crearLibro(@Valid @RequestBody LibroDTO libroDTO) {
         EntityModel<LibroDTO> resource = serviLibro.addBook(libroDTO);
-        return ResponseEntity.created(linkTo(ContLibro.class).slash(resource.getContent().getId()).toUri()).build();
+        return ResponseEntity.created(linkTo(ContLibro.class).slash(resource.getContent().getId()).toUri()).body(resource);
     }
 
     // Obtener un libro por ID
