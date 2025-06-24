@@ -10,6 +10,7 @@ import com.biblioteca.model.PrestamoDTO;
 import com.biblioteca.service.ServiPrestamo;
 import com.biblioteca.exception.BadRequestException;
 import com.biblioteca.exception.ResourceNotFoundException;
+import com.biblioteca.exception.ForbiddenException;
 
 import java.time.LocalDate;
 
@@ -28,7 +29,7 @@ public class ContPrestamo {
 
     // Crear un nuevo préstamo
     @PostMapping
-    public ResponseEntity<Void> crearPrestamo(@Valid @RequestBody PrestamoDTO prestamoDTO) {
+    public ResponseEntity<EntityModel<PrestamoDTO>> crearPrestamo(@Valid @RequestBody PrestamoDTO prestamoDTO) {
         try {
             if (prestamoDTO.getUserId() == null || prestamoDTO.getBookId() == null) {
                 throw new BadRequestException("User ID and Book ID are required");
@@ -38,11 +39,13 @@ public class ContPrestamo {
             if (content == null || content.getId() == null) {
                 throw new ResourceNotFoundException("Resource content or ID is null");
             }
-            return ResponseEntity.created(linkTo(ContPrestamo.class).slash(content.getId()).toUri()).build();
+            return ResponseEntity.created(linkTo(ContPrestamo.class).slash(content.getId()).toUri()).body(resource);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(404).build();
         } catch (BadRequestException e) {
             return ResponseEntity.badRequest().build();
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(403).build();
         }
     }
 
@@ -57,6 +60,8 @@ public class ContPrestamo {
             return ResponseEntity.ok(resource);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(404).build();
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(403).build();
         }
     }
 
@@ -70,6 +75,8 @@ public class ContPrestamo {
             return ResponseEntity.status(404).build();
         } catch (BadRequestException e) {
             return ResponseEntity.badRequest().build();
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(403).build();
         }
     }
 
@@ -83,6 +90,8 @@ public class ContPrestamo {
             return ResponseEntity.status(404).build();
         } catch (BadRequestException e) {
             return ResponseEntity.badRequest().build();
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(403).build();
         }
     }
 
