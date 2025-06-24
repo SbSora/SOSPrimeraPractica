@@ -89,26 +89,41 @@ public class ServiLibro {
 
     public PagedModel<EntityModel<LibroDTO>> listBooks(Pageable pageable) {
         Page<Libro> libros = repoLibro.findAll(pageable);
+        if (libros.isEmpty()) {
+            throw new ResourceNotFoundException("No se encontraron libros");
+        }
         return bookPagedAssembler.toModel(libros.map(this::convertToLibroDTO));
     }
 
     public PagedModel<EntityModel<LibroDTO>> listBooksByTitle(String title, Pageable pageable) {
         Page<Libro> libros = repoLibro.findByTitleContaining(title, pageable);
+        if (libros.isEmpty()) {
+            throw new ResourceNotFoundException("No se encontraron libros con ese título");
+        }
         return bookPagedAssembler.toModel(libros.map(this::convertToLibroDTO));
     }
 
     public PagedModel<EntityModel<LibroDTO>> listAvailableBooks(Pageable pageable) {
         Page<Libro> libros = repoLibro.findByAvailableTrue(pageable);
+        if (libros.isEmpty()) {
+            throw new ResourceNotFoundException("No se encontraron libros disponibles");
+        }
         return bookPagedAssembler.toModel(libros.map(this::convertToLibroDTO));
     }
 
     public PagedModel<EntityModel<LibroDTO>> listUnavailableBooks(Pageable pageable) {
         Page<Libro> libros = repoLibro.findByAvailableFalse(pageable);
+        if (libros.isEmpty()) {
+            throw new ResourceNotFoundException("No se encontraron libros no disponibles");
+        }
         return bookPagedAssembler.toModel(libros.map(this::convertToLibroDTO));
     }
 
     public PagedModel<EntityModel<LibroDTO>> listBooksByTitleAndAvailable(String title, boolean available, Pageable pageable) {
         Page<Libro> libros = repoLibro.findByTitleContainingAndAvailable(title, available, pageable);
+        if (libros.isEmpty()) {
+            throw new ResourceNotFoundException("No se encontraron libros con ese título y disponibilidad");
+        }
         return bookPagedAssembler.toModel(libros.map(this::convertToLibroDTO));
     }
 

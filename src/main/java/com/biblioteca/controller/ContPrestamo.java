@@ -10,6 +10,7 @@ import com.biblioteca.model.PrestamoDTO;
 import com.biblioteca.service.ServiPrestamo;
 import com.biblioteca.exception.BadRequestException;
 import com.biblioteca.exception.ResourceNotFoundException;
+import com.biblioteca.exception.ForbiddenException;
 
 import java.time.LocalDate;
 
@@ -43,6 +44,8 @@ public class ContPrestamo {
             return ResponseEntity.status(404).build();
         } catch (BadRequestException e) {
             return ResponseEntity.badRequest().build();
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(403).build();
         }
     }
 
@@ -57,6 +60,8 @@ public class ContPrestamo {
             return ResponseEntity.ok(resource);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(404).build();
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(403).build();
         }
     }
 
@@ -70,6 +75,8 @@ public class ContPrestamo {
             return ResponseEntity.status(404).build();
         } catch (BadRequestException e) {
             return ResponseEntity.badRequest().build();
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(403).build();
         }
     }
 
@@ -83,6 +90,8 @@ public class ContPrestamo {
             return ResponseEntity.status(404).build();
         } catch (BadRequestException e) {
             return ResponseEntity.badRequest().build();
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(403).build();
         }
     }
 

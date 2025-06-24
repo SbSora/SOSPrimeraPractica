@@ -1,6 +1,7 @@
 package com.biblioteca.service;
 
 import com.biblioteca.exception.BadRequestException;
+import com.biblioteca.exception.ForbiddenException;
 import com.biblioteca.exception.ResourceNotFoundException;
 import com.biblioteca.model.Libro;
 import com.biblioteca.model.Prestamo;
@@ -58,6 +59,11 @@ public class ServiPrestamo {
 
     @Transactional
     public EntityModel<PrestamoDTO> borrowBook(Long userId, Long bookId) {
+        // Verificar si el usuario tiene una penalización activa
+        if (repoPrestamo.hasActivePenalty(userId, LocalDate.now())) {
+            throw new ForbiddenException("El usuario tiene una penalización activa y no puede realizar préstamos");
+        }
+
         Usuario usuario = repoUsuario.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
         Libro libro = repoLibro.findById(bookId)
@@ -66,10 +72,6 @@ public class ServiPrestamo {
         Page<Prestamo> activeLoans = repoPrestamo.findByUserIdAndReturnDateIsNull(userId, Pageable.unpaged());
         if (activeLoans.getTotalElements() >= 3) {
             throw new BadRequestException("El usuario ya tiene el máximo de préstamos activos (3)");
-        }
-
-        if (hasActivePenalty(userId)) {
-            throw new BadRequestException("El usuario tiene una penalización activa");
         }
 
         if (!libro.isAvailable()) {
@@ -237,10 +239,6 @@ public class ServiPrestamo {
             resource.add(linkTo(methodOn(ContLibro.class).obtenerLibro(prestamoDTO.getBookId())).withRel("libro"));
             return resource;
         });
-    }
-
-    private boolean hasActivePenalty(Long userId) {
-        return repoPrestamo.hasActivePenalty(userId, LocalDate.now());
     }
 
     // Methods for ContUsuario
