@@ -7,7 +7,6 @@
     import java.net.http.HttpRequest.BodyPublishers;
     import java.net.http.HttpResponse;
     import java.nio.charset.StandardCharsets;
-    import java.util.Scanner;
 
 
     public class ClienteBiblioteca {
@@ -16,25 +15,28 @@
         private static final HttpClient client = HttpClient.newHttpClient();
 
 public static void main(String[] args) throws Exception {
+
     System.out.println("\n=========== INICIO DE PRUEBAS AUTOMÁTICAS ==========\n");
 
     test1(); // Crear usuario + libro + préstamo + devolver
     test2(); // Crear usuario + consultar + listar usuarios
     test3(); // Crear libro + consultar + listar libros
     test4(); // Crear + modificar + eliminar usuario
-    test5(); // Crear + modificar + eliminar libro
+    test5(); // Filtrado por título + disponibilidad
     test6(); // Crear + devolver préstamo
     test7(); // Crear + ampliar préstamo
     test8(); // Consultar actividad completa (datos + préstamos)
 
+
     System.out.println("\n=========== FIN DE PRUEBAS ==========\n");
+
 }
 
 
         public static void test1() throws Exception {
             System.out.println("\n========= INICIO TEST 1 =========");
 
-            int userId = crearUsuario("pepe_test", "1234567", "2000-01-01", "pepe@test.com");
+            int userId = crearUsuario("carlos_test", "934719", "2004-03-24", "carlos@test.com");
             int bookId = crearLibro("Libro Test", "Autor1", "1ª", "123-TEST", "Editorial1", true);
             int prestamoId = crearPrestamo(userId, bookId);
             devolverPrestamo(prestamoId);
@@ -104,29 +106,30 @@ public static void main(String[] args) throws Exception {
 
 
         public static void test5() throws Exception {
-            System.out.println("\n========= INICIO TEST 5: Listar Libros con Filtros =========");
+            System.out.println("\n========= INICIO TEST 5: Filtrado por título + disponibilidad =========");
 
-            // 1. Crear libros variados
-            crearLibro("RESTful Java", "Juan API", "1ª", "ISBN-REST-001", "TechPress", true);
-            crearLibro("Cocina REST", "Chef GET", "2ª", "ISBN-REST-002", "GourmetBooks", false);
-            crearLibro("Principios REST", "Arquitecto PUT", "3ª", "ISBN-REST-003", "SoftDesign", true);
-            crearLibro("REST Recetas", "Sopa DELETE", "1ª", "ISBN-REST-004", "GourmetBooks", false);
+            // Paso 1: listar todos los libros cuyo título contenga "Progra", sin importar si están disponibles
+            System.out.println("\n--- Libros con 'Progra' en el título (todos) ---");
+            listarLibros("Progra", false);
 
-            // 2. Listar todos los libros (sin filtros)
-            System.out.println("\n--- Todos los libros (página 0, sin filtro) ---");
-            listarLibros("", false);
+            // Paso 2: listar solo los disponibles que contengan "Progra"
+            System.out.println("\n--- Libros con 'Progra' en el título (solo disponibles) ---");
+            listarLibros("Progra", true);
 
-            // 3. Listar libros cuyo título contiene "rest"
-            System.out.println("\n--- Libros con 'rest' en el título ---");
-            listarLibros("rest", false);
+            // Paso 3: hacer préstamo de uno de los disponibles que contengan "Progra"
+            int userId = 1;  // Por ejemplo, usuario con ID 1 ya existente
+            int bookId = 10; // Título: "Programación en Java (Edición 3)", disponible
 
-            // 4. Listar solo libros disponibles
-            System.out.println("\n--- Libros disponibles ---");
-            listarLibros("", true);
+            System.out.println("\n--- Realizando préstamo del libro ID 10 ---");
+            crearPrestamo(userId, bookId);
 
-            // 5. Libros con 'rest' en el título y que estén disponibles
-            System.out.println("\n--- Libros con 'rest' y disponibles ---");
-            listarLibros("rest", true);
+            // Paso 4: volver a listar con filtro de título "Progra" (todos)
+            System.out.println("\n--- Libros con 'Progra' en el título tras préstamo (todos) ---");
+            listarLibros("Progra", false);
+
+            // Paso 5: volver a listar con filtro "Progra" y solo disponibles
+            System.out.println("\n--- Libros con 'Progra' en el título tras préstamo (solo disponibles) ---");
+            listarLibros("Progra", true);
 
             System.out.println("========= FIN TEST 5 =========\n");
         }
@@ -206,6 +209,7 @@ public static void main(String[] args) throws Exception {
 
             System.out.println("========= FIN TEST 8 =========\n");
         }
+
 
 
 
